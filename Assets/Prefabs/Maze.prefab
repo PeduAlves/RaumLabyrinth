@@ -1,0 +1,64 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2816210129591794074
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6367474873025907011}
+  - component: {fileID: 3203574012870503850}
+  m_Layer: 0
+  m_Name: Maze
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6367474873025907011
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2816210129591794074}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0, y: -0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &3203574012870503850
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2816210129591794074}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 95d8b8b09dbd61333bccd3679dfaa9ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MazeGenerator
+  Width: 30
+  Height: 30
+  Seed: 2142
+  spacing: 6
+  ObjectToSpawn: {fileID: 3464462770360200799, guid: 65e743df332afadef8a6ed37e373c05d, type: 3}
+  NumberOfObjects: 1
+  ObjectHeight: 1
+  run: {fileID: 0}
+  map: {fileID: 0}
+  mainCamera: {fileID: 0}
+  cameraMapa: {fileID: 0}
+  tempoDeVooCamera: 2
+  paredesPorFrame: 5
+  WallPrefab: {fileID: 1774059016747193438, guid: 46247ac8e92c21b4baecd3e7df8b0765, type: 3}
+  FloorPrefab: {fileID: 2950400484482148623, guid: 341f5d7dc259d08d9ab13d73671d3cb2, type: 3}
+  PlayerPrefab: {fileID: 8045391640182931350, guid: 32bd3fb7214ed9701b7f4f63546d9179, type: 3}
+  mapaUI: {fileID: 0}
+  BraidingRate: 10
