@@ -15,8 +15,13 @@ public class Enemy : MonoBehaviour
     [SerializeField] private float pursueSpeed = 1;
     [SerializeField] private float turningSpeed = 1;
     [SerializeField] private float headTurnSpeed = 1.5f;
+    [SerializeField] private float patrolRadius = 5f;
+    [SerializeField] private float maxSearchTime = 30f;
     private Vector3 lastTargetPosition = Vector3.zero;
-    private bool searching = false;
+    public float searchTimer = 0f; //ToDo: make it private
+    public bool pursuing = false; //ToDo: make it private
+    public bool walking = false; //ToDo: make it private
+    public bool searching = false; //ToDo: make it private
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
@@ -24,6 +29,21 @@ public class Enemy : MonoBehaviour
         visionRange = GetComponent<SphereCollider>();
         spawnLocation = transform.position;
         agent = GetComponent<NavMeshAgent>();
+    }
+
+    Vector3 ChooseRandomPoint(Vector3 startingPoint)
+    {
+        return (Random.insideUnitSphere * patrolRadius) + startingPoint;
+    }
+
+    void GoToLocation(Vector3 location)
+    {
+        walking = true;
+
+        Vector3 adjustedTargetPosition = new Vector3(location.x, transform.position.y, location.z);
+
+        agent.SetDestination(adjustedTargetPosition);
+
     }
 
     void PlayerDetector(Collider target)
@@ -43,44 +63,59 @@ public class Enemy : MonoBehaviour
             {
                 Debug.DrawRay(headCenter, targetDirection * distanciaParaAlvo, Color.green);
                 lastTargetPosition = target.transform.position;
-                searching = true;
+                pursuing = true;
             }
         }
     }
 
     void PursuePlayer()
     {
-        if (searching)
-        {
-            Vector3 adjustedTargetPosition = new Vector3(lastTargetPosition.x, transform.position.y, lastTargetPosition.z);
-            /* Vector3 targetDirection = (adjustedTargetPosition - transform.position).normalized;
-
-            if (targetDirection != Vector3.zero)
-            {
-                Quaternion targetRotation = Quaternion.LookRotation(targetDirection);
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, turningSpeed * Time.deltaTime);
-            }
-
-            transform.Translate(Vector3.forward * pursueSpeed * Time.deltaTime); */
-
-            agent.SetDestination(adjustedTargetPosition);
-
-            if (Vector3.Distance(adjustedTargetPosition, transform.position) <= 0.5f)
-            {
-                searching = false;
-            }
-        }
+        GoToLocation(lastTargetPosition);
     }
 
     void Patrol(Vector3 areaCenter)
     {
-        // ToDo: Implement patrol behavior here: the enemy should move in a radious around the spawn location, changing direction randomly after a certain time or distance.
-        // if it's out of the patrol range, it should start the searchingForPlayer behavior.
+        GoToLocation(ChooseRandomPoint(areaCenter));
+    }
+    
+    void SearchPlayer()
+    {
+        Patrol(lastTargetPosition);
     }
 
-    void Seeking()
+    // Update is called once per frame
+    void Update()
     {
-        // ToDo: Implement searching for player behavior here: the enemy should patrol the last known position of the player and look around for a short time, if it doesn't find the player, it should come back to spawn.
+        if (pursuing)
+        {
+            PursuePlayer();
+        }
+        else if (searching && !walking)
+        {
+            SearchPlayer();
+        }
+        else if (!walking) 
+        {
+            Patrol(spawnLocation);
+        }
+        if (!agent.pathPending && agent.remainingDistance <= 0.5f)
+        {
+            walking = false;
+            if (pursuing)
+            {
+                pursuing = false; 
+                searching = true;
+            }
+        }
+        if (searching)
+        {
+            searchTimer += Time.deltaTime;
+            if (searchTimer >= maxSearchTime)
+            {
+                searching = false;
+                searchTimer = 0f;
+            }
+        }
     }
 
     private void OnTriggerStay(Collider other)
@@ -89,11 +124,5 @@ public class Enemy : MonoBehaviour
         {
             PlayerDetector(other);
         }
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        PursuePlayer();
     }
 }
