@@ -9,7 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2942220176476431327}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Calf.R
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -41,7 +41,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1571142187642356137}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Head
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -73,7 +73,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5856031686590448490}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Shoulder.R
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -105,7 +105,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8191644216928734208}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Spine.Lower
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -140,7 +140,8 @@ GameObject:
   - component: {fileID: 3635154817793915714}
   - component: {fileID: 2329705088980206105}
   - component: {fileID: 4868433382327986310}
-  m_Layer: 0
+  - component: {fileID: 442437331051463522}
+  m_Layer: 8
   m_Name: GolemV2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -209,6 +210,34 @@ MonoBehaviour:
   pursueSpeed: 1
   turningSpeed: 1
   headTurnSpeed: 1.5
+  patrolRadius: 5
+  maxSearchTime: 30
+  searchTimer: 0
+  pursuing: 0
+  walking: 0
+  searching: 0
+--- !u!195 &442437331051463522
+NavMeshAgent:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2914185222997069177}
+  m_Enabled: 1
+  m_AgentTypeID: -1372625422
+  m_Radius: 2.4
+  m_Speed: 1
+  m_Acceleration: 8
+  avoidancePriority: 50
+  m_AngularSpeed: 60
+  m_StoppingDistance: 0
+  m_AutoTraverseOffMeshLink: 1
+  m_AutoBraking: 1
+  m_AutoRepath: 1
+  m_Height: 6
+  m_BaseOffset: -1.11
+  m_WalkableMask: 4294967295
+  m_ObstacleAvoidanceType: 4
 --- !u!1 &3061523985126610135
 GameObject:
   m_ObjectHideFlags: 0
@@ -218,7 +247,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8327968359988118162}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Arm.R
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -250,7 +279,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2306079208269104478}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Pelvis.L
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -282,7 +311,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2105210040388216595}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Thigh.R
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -314,7 +343,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6011171857954679517}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Calf.R_end
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -345,7 +374,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5532463493827988355}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Forearm.L
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -377,7 +406,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5793845173498892090}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Shoulder.L
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -409,7 +438,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5876429964061313840}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Thigh.L
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -441,7 +470,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2608432818759614484}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Calf.L_end
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -472,7 +501,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8602298066868126621}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Root_end
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -503,7 +532,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 43812134100607170}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Root
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -535,7 +564,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1797610969307586465}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Golem.Rig
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -551,7 +580,7 @@ Transform:
   m_GameObject: {fileID: 6372786575104719811}
   serializedVersion: 2
   m_LocalRotation: {x: -0.7071067, y: -0.000000030908616, z: 0.000000030908623, w: 0.7071068}
-  m_LocalPosition: {x: -0, y: 0, z: 0}
+  m_LocalPosition: {x: -0, y: 1.19, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -569,7 +598,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7742446809345858987}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Spine.Torso
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -603,7 +632,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4628660620709054600}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Forearm.R
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -635,7 +664,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8959698199149520187}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Calf.L
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -667,7 +696,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8356788193596778474}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Forearm.R_end
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -698,7 +727,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7012211636977968158}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Head_end
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -729,7 +758,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4085935888013688296}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Pelvis.R
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -761,7 +790,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6454913102518247142}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Forearm.L_end
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -792,7 +821,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5282162561865023057}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Arm.L
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -826,7 +855,7 @@ GameObject:
   - component: {fileID: 8115086600762132169}
   - component: {fileID: 8703017903660236546}
   - component: {fileID: 4157086627057957490}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Golem.Mesh
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -842,7 +871,7 @@ Transform:
   m_GameObject: {fileID: 8696994716501077656}
   serializedVersion: 2
   m_LocalRotation: {x: -0.7071067, y: -0.000000030908616, z: 0.000000030908623, w: 0.7071068}
-  m_LocalPosition: {x: -0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 1.19, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -868,8 +897,6 @@ SkinnedMeshRenderer:
   m_RayTracingAccelStructBuildFlagsOverride: 0
   m_RayTracingAccelStructBuildFlags: 1
   m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -891,11 +918,9 @@ SkinnedMeshRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_MaskInteraction: 0
   serializedVersion: 2
   m_Quality: 0
   m_UpdateWhenOffscreen: 0

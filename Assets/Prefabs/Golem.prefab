@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 1465414943732735337}
   - component: {fileID: 1958838087861621701}
   - component: {fileID: 7680245097958123607}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Golem
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -64,8 +64,6 @@ MeshRenderer:
   m_RayTracingAccelStructBuildFlagsOverride: 0
   m_RayTracingAccelStructBuildFlags: 1
   m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -87,11 +85,9 @@ MeshRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!65 &1465414943732735337
 BoxCollider:
@@ -158,3 +154,10 @@ MonoBehaviour:
   idleSpeed: 0.5
   pursueSpeed: 1
   turningSpeed: 1
+  headTurnSpeed: 1.5
+  patrolRadius: 5
+  maxSearchTime: 30
+  searchTimer: 0
+  pursuing: 0
+  walking: 0
+  searching: 0
