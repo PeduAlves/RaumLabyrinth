@@ -1384,8 +1384,20 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 747043333}
     - target: {fileID: 3203574012870503850, guid: 087016808b63c259593db58b13afa54a, type: 3}
+      propertyPath: ObjectHeight
+      value: 0.01
+      objectReference: {fileID: 0}
+    - target: {fileID: 3203574012870503850, guid: 087016808b63c259593db58b13afa54a, type: 3}
       propertyPath: wallPerFrame
       value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 3203574012870503850, guid: 087016808b63c259593db58b13afa54a, type: 3}
+      propertyPath: ObjectToSpawn
+      value: 
+      objectReference: {fileID: 2914185222997069177, guid: 416295e96210ef34fb4cd0474686e3d3, type: 3}
+    - target: {fileID: 3203574012870503850, guid: 087016808b63c259593db58b13afa54a, type: 3}
+      propertyPath: NumberOfObjects
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 3203574012870503850, guid: 087016808b63c259593db58b13afa54a, type: 3}
       propertyPath: enemyNavmeshSurface
