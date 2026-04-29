@@ -1403,6 +1403,34 @@ PrefabInstance:
       propertyPath: enemyNavmeshSurface
       value: 
       objectReference: {fileID: 1649042286}
+    - target: {fileID: 3203574012870503850, guid: 087016808b63c259593db58b13afa54a, type: 3}
+      propertyPath: ObjectsToSpawn.Array.size
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 3203574012870503850, guid: 087016808b63c259593db58b13afa54a, type: 3}
+      propertyPath: ObjectsToSpawn.Array.data[0].Quantity
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3203574012870503850, guid: 087016808b63c259593db58b13afa54a, type: 3}
+      propertyPath: ObjectsToSpawn.Array.data[1].Quantity
+      value: 10
+      objectReference: {fileID: 0}
+    - target: {fileID: 3203574012870503850, guid: 087016808b63c259593db58b13afa54a, type: 3}
+      propertyPath: ObjectsToSpawn.Array.data[0].ObjectHight
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3203574012870503850, guid: 087016808b63c259593db58b13afa54a, type: 3}
+      propertyPath: ObjectsToSpawn.Array.data[1].ObjectHight
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3203574012870503850, guid: 087016808b63c259593db58b13afa54a, type: 3}
+      propertyPath: ObjectsToSpawn.Array.data[0].ObjectToSpawn
+      value: 
+      objectReference: {fileID: 3464462770360200799, guid: 65e743df332afadef8a6ed37e373c05d, type: 3}
+    - target: {fileID: 3203574012870503850, guid: 087016808b63c259593db58b13afa54a, type: 3}
+      propertyPath: ObjectsToSpawn.Array.data[1].ObjectToSpawn
+      value: 
+      objectReference: {fileID: 2914185222997069177, guid: 416295e96210ef34fb4cd0474686e3d3, type: 3}
     - target: {fileID: 6367474873025907011, guid: 087016808b63c259593db58b13afa54a, type: 3}
       propertyPath: m_LocalPosition.x
       value: -0

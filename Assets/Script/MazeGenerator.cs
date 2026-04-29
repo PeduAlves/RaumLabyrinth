@@ -12,16 +12,14 @@ public class MazeGenerator : MonoBehaviour
     public int Seed = 0;
     public float spacing = 4f;
 
-    [Header("Objetos de Jogo")]
-    public GameObject ObjectToSpawn; // Arraste seu item/inimigo aqui
-    public int NumberOfObjects = 1;  // Quantos objetos criar
-    public float ObjectHeight = 1f; // Altura do chão (para não ficar enterrado)
+    [Header("Game Objects")]
+    public List<ObjectSpawnData> ObjectsToSpawn; // Arraste seu item/inimigo aqui
     public NavMeshSurface enemyNavmeshSurface; // Referência ao NavMeshSurface para os inimigos navegarem
 
     public GameObject run;
     public GameObject map;
 
-    [Header("Camera & animations")]
+    [Header("Camera & Animations")]
     public Camera mainCamera; // Main player camera object
     public Camera mapCamera; // Map camera object
     public float cameraFlyingTime = 2.0f; // 1st person transitioning time
@@ -49,6 +47,14 @@ public class MazeGenerator : MonoBehaviour
         // Adicione isso junto com as outras variáveis privadas
         public int X, Z;
         public MazeCell(int x, int z) { X = x; Z = z; }
+    }
+    
+    [System.Serializable]
+    public struct ObjectSpawnData
+    {
+        public GameObject ObjectToSpawn;
+        public int Quantity;
+        public float ObjectHight;
     }
 
     void Start()
@@ -290,34 +296,49 @@ public class MazeGenerator : MonoBehaviour
 
     void SpawnRandomObjects()
     {
-        if (ObjectToSpawn == null) return;
-
+        if (ObjectsToSpawn.Count == 0|| ObjectsToSpawn == null) return;
+        
         System.Random rng = new System.Random(Seed); // Usando a mesma Seed para consistência
-        int spawnedCount = 0;
         List<string> usedPositions = new List<string>(); // Para evitar 2 objetos no mesmo lugar
+        GameObject objectToSpawn; int numberOfObjects;
+        float objectHeight;
 
-        while (spawnedCount < NumberOfObjects)
+        for (int i = 0; i < ObjectsToSpawn.Count; i++)
         {
-            // Escolhe uma célula aleatória
-            int rX = rng.Next(0, Width);
-            int rZ = rng.Next(0, Height);
+            objectToSpawn = ObjectsToSpawn[i].ObjectToSpawn;
+            numberOfObjects = ObjectsToSpawn[i].Quantity;
+            objectHeight = ObjectsToSpawn[i].ObjectHight;
 
-            // Regra: Não spawnar na posição inicial do Player (0,0)
-            if (rX == 0 && rZ == 0) continue;
+            int spawnedCount = 0;
 
-            // Regra: Não spawnar onde já tem objeto
-            string posKey = $"{rX},{rZ}";
-            if (usedPositions.Contains(posKey)) continue;
 
-            // Calcula a posição no mundo real
-            // Multiplicamos pelo spacing para centralizar no corredor
-            Vector3 worldPosition = new Vector3(rX * spacing, ObjectHeight, rZ * spacing);
+            while (spawnedCount < numberOfObjects)
+            {
+                // Escolhe uma célula aleatória
+                int rX = rng.Next(0, Width);
+                int rZ = rng.Next(0, Height);
 
-            Instantiate(ObjectToSpawn, worldPosition, Quaternion.identity, transform);
+                // Regra: Não spawnar na posição inicial do Player (0,0)
+                if (rX == 0 && rZ == 0) continue;
 
-            usedPositions.Add(posKey);
-            spawnedCount++;
+                // Regra: Não spawnar onde já tem objeto
+                string posKey = $"{rX},{rZ}";
+                if (usedPositions.Contains(posKey)) continue;
+
+                // Calcula a posição no mundo real
+                // Multiplicamos pelo spacing para centralizar no corredor
+                Vector3 worldPosition = new Vector3(rX * spacing, objectHeight, rZ * spacing);
+
+                Instantiate(objectToSpawn, worldPosition, Quaternion.identity, transform);
+
+                usedPositions.Add(posKey);
+                spawnedCount++;
+            }
+
         }
+
+            
+            
     }
     
     private int CountDeadEnds()
