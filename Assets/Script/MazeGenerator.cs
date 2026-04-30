@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Diagnostics;
+using Unity.AI.Navigation;
 
 public class MazeGenerator : MonoBehaviour
 {
@@ -11,31 +12,30 @@ public class MazeGenerator : MonoBehaviour
     public int Seed = 0;
     public float spacing = 4f;
 
-    [Header("Objetos de Jogo")]
-    public GameObject ObjectToSpawn; // Arraste seu item/inimigo aqui
-    public int NumberOfObjects = 1;  // Quantos objetos criar
-    public float ObjectHeight = 1f; // Altura do chão (para não ficar enterrado)
+    [Header("Game Objects")]
+    public List<ObjectSpawnData> ObjectsToSpawn; // Arraste seu item/inimigo aqui
+    public NavMeshSurface enemyNavmeshSurface; // Referência ao NavMeshSurface para os inimigos navegarem
 
     public GameObject run;
     public GameObject map;
 
-    [Header("Animação e Câmera")]
-    public Camera mainCamera; // Arraste sua Main Camera aqui
-    public Camera cameraMapa;
-    public float tempoDeVooCamera = 2.0f; // Tempo da transição para 1ª pessoa
-    public int paredesPorFrame = 5; // Quantas paredes aparecem por frame (aumente para acelerar)
+    [Header("Camera & Animations")]
+    public Camera mainCamera; // Main player camera object
+    public Camera mapCamera; // Map camera object
+    public float cameraFlyingTime = 2.0f; // 1st person transitioning time
+    public int wallPerFrame = 5; // The amount of wall appear per frame (higher number accelerate the process)
 
     [Header("Prefabs")]
     public GameObject WallPrefab;
     public GameObject FloorPrefab;
     public GameObject PlayerPrefab;
-    public GameObject mapaUI; // Arraste o painel do mapa aqui
+    public GameObject mapUI;
 
     // Dados internos
     private MazeCell[,] grid;
     private float cellHeight;
     private float cellThickness;
-    private List<MazeCell> ordemDeGeracao;
+    private List<MazeCell> generationOrder;
 
     // --- CLASSE MAZE CELL (Mantida igual) ---
     public class MazeCell
@@ -48,17 +48,25 @@ public class MazeGenerator : MonoBehaviour
         public int X, Z;
         public MazeCell(int x, int z) { X = x; Z = z; }
     }
+    
+    [System.Serializable]
+    public struct ObjectSpawnData
+    {
+        public GameObject ObjectToSpawn;
+        public int Quantity;
+        public float ObjectHight;
+    }
 
     void Start()
     {
         // Iniciamos a sequência cinematográfica
-        StartCoroutine(SequenciaDeGeracao());
+        StartCoroutine(GenerationSequence());
     }
 
     // --- ORQUESTRADOR DA ANIMAÇÃO ---
- IEnumerator SequenciaDeGeracao()
+ IEnumerator GenerationSequence()
     {
-        if(mainCamera != null )PosicionarCameraAerea();
+        if(mainCamera != null )PositionAerialCamera();
 
         // 1. INÍCIO DO CRONÔMETRO DE PERFORMANCE
         Stopwatch timer = new Stopwatch();
@@ -73,11 +81,14 @@ public class MazeGenerator : MonoBehaviour
         yield return new WaitForSeconds(0.5f); 
 
         yield return StartCoroutine(DrawWallsAnimated());
-        if(mainCamera != null)SpawnRandomObjects();
+
+        enemyNavmeshSurface.BuildNavMesh();
+
+        if (mainCamera != null)SpawnRandomObjects();
         if(mainCamera != null)yield return StartCoroutine(SpawnPlayerAndTransition());
     }
 
-    void PosicionarCameraAerea()
+    void PositionAerialCamera()
     {
         if (mainCamera == null) mainCamera = Camera.main;
 
@@ -91,8 +102,8 @@ public class MazeGenerator : MonoBehaviour
         mainCamera.transform.position = new Vector3(centerX, altura, centerZ);
         mainCamera.transform.rotation = Quaternion.Euler(90, 0, 0); // Olha direto para baixo
 
-        cameraMapa.transform.position = new Vector3(centerX, altura + 10f, centerZ);
-        cameraMapa.transform.rotation = Quaternion.Euler(90, 0, 0); // Olha direto para baixo
+        mapCamera.transform.position = new Vector3(centerX, altura + 10f, centerZ);
+        mapCamera.transform.rotation = Quaternion.Euler(90, 0, 0); // Olha direto para baixo
     }
 
     // --- LÓGICA DE GERAÇÃO (Separada do desenho) ---
@@ -105,7 +116,7 @@ public class MazeGenerator : MonoBehaviour
         }
         System.Random rng = new System.Random(Seed);
         grid = new MazeCell[Width, Height];
-        ordemDeGeracao = new List<MazeCell>(); 
+        generationOrder = new List<MazeCell>(); 
 
         for (int x = 0; x < Width; x++)
             for (int z = 0; z < Height; z++)
@@ -115,7 +126,7 @@ public class MazeGenerator : MonoBehaviour
         MazeCell current = grid[0, 0];
         
         current.IsVisited = true;
-        ordemDeGeracao.Add(current); 
+        generationOrder.Add(current); 
         
         current.MyWallThickness = 10f; 
         current.MyWallHeight = 2f;
@@ -133,7 +144,7 @@ public class MazeGenerator : MonoBehaviour
                 RemoveWalls(current, neighbor);
                 
                 neighbor.IsVisited = true;
-                ordemDeGeracao.Add(neighbor); 
+                generationOrder.Add(neighbor); 
 
                 neighbor.MyWallThickness = current.MyWallThickness; 
                 neighbor.MyWallHeight = current.MyWallHeight;
@@ -173,7 +184,7 @@ public class MazeGenerator : MonoBehaviour
         int count = 0;
 
         // AQUI MUDOU: Usamos o foreach na lista de histórico em vez dos loops x/z
-        foreach (MazeCell cell in ordemDeGeracao)
+        foreach (MazeCell cell in generationOrder)
         {
             Vector3 position = new Vector3(cell.X * spacing, 0, cell.Z * spacing);
             float offset = spacing / 2f;
@@ -187,7 +198,7 @@ public class MazeGenerator : MonoBehaviour
 
             // Controle de fluxo da animação
             count++;
-            if (count >= paredesPorFrame)
+            if (count >= wallPerFrame)
             {
                 count = 0;
                 yield return null; 
@@ -209,7 +220,7 @@ public class MazeGenerator : MonoBehaviour
         // 1. Spawna o Player
         Vector3 startPos = new Vector3(0, 2f, 0);
         GameObject player = Instantiate(PlayerPrefab, startPos, Quaternion.identity);
-        player.GetComponent<FirstPersonController>().mapaUIPlayer = mapaUI;
+        player.GetComponent<FirstPersonController>().mapaUIPlayer = mapUI;
 
         // 2. Tenta achar a câmera dentro do Player (caso seja um prefab FPS padrão)
         // Se não achar, usa o próprio transform do player
@@ -224,10 +235,10 @@ public class MazeGenerator : MonoBehaviour
         Quaternion startCamRot = mainCamera.transform.rotation;
         float elapsed = 0;
 
-        while (elapsed < tempoDeVooCamera)
+        while (elapsed < cameraFlyingTime)
         {
             elapsed += Time.deltaTime;
-            float t = elapsed / tempoDeVooCamera;
+            float t = elapsed / cameraFlyingTime;
             
             // Suavização (SmoothStep)
             t = t * t * (3f - 2f * t); 
@@ -285,34 +296,49 @@ public class MazeGenerator : MonoBehaviour
 
     void SpawnRandomObjects()
     {
-        if (ObjectToSpawn == null) return;
-
+        if (ObjectsToSpawn.Count == 0|| ObjectsToSpawn == null) return;
+        
         System.Random rng = new System.Random(Seed); // Usando a mesma Seed para consistência
-        int spawnedCount = 0;
         List<string> usedPositions = new List<string>(); // Para evitar 2 objetos no mesmo lugar
+        GameObject objectToSpawn; int numberOfObjects;
+        float objectHeight;
 
-        while (spawnedCount < NumberOfObjects)
+        for (int i = 0; i < ObjectsToSpawn.Count; i++)
         {
-            // Escolhe uma célula aleatória
-            int rX = rng.Next(0, Width);
-            int rZ = rng.Next(0, Height);
+            objectToSpawn = ObjectsToSpawn[i].ObjectToSpawn;
+            numberOfObjects = ObjectsToSpawn[i].Quantity;
+            objectHeight = ObjectsToSpawn[i].ObjectHight;
 
-            // Regra: Não spawnar na posição inicial do Player (0,0)
-            if (rX == 0 && rZ == 0) continue;
+            int spawnedCount = 0;
 
-            // Regra: Não spawnar onde já tem objeto
-            string posKey = $"{rX},{rZ}";
-            if (usedPositions.Contains(posKey)) continue;
 
-            // Calcula a posição no mundo real
-            // Multiplicamos pelo spacing para centralizar no corredor
-            Vector3 worldPosition = new Vector3(rX * spacing, ObjectHeight, rZ * spacing);
+            while (spawnedCount < numberOfObjects)
+            {
+                // Escolhe uma célula aleatória
+                int rX = rng.Next(0, Width);
+                int rZ = rng.Next(0, Height);
 
-            Instantiate(ObjectToSpawn, worldPosition, Quaternion.identity, transform);
+                // Regra: Não spawnar na posição inicial do Player (0,0)
+                if (rX == 0 && rZ == 0) continue;
 
-            usedPositions.Add(posKey);
-            spawnedCount++;
+                // Regra: Não spawnar onde já tem objeto
+                string posKey = $"{rX},{rZ}";
+                if (usedPositions.Contains(posKey)) continue;
+
+                // Calcula a posição no mundo real
+                // Multiplicamos pelo spacing para centralizar no corredor
+                Vector3 worldPosition = new Vector3(rX * spacing, objectHeight, rZ * spacing);
+
+                Instantiate(objectToSpawn, worldPosition, Quaternion.identity, transform);
+
+                usedPositions.Add(posKey);
+                spawnedCount++;
+            }
+
         }
+
+            
+            
     }
     
     private int CountDeadEnds()
