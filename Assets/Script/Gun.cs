@@ -13,18 +13,39 @@ public class Gun : MonoBehaviour
     public float Range = 100f;
     public LayerMask HitLayers;
 
+    [Header("Shooting Settings")]
+    public float reloadTime = 2f; // Time to reload in seconds
+    public float recoilAmount = 1f; // Amount of recoil applied to the player when shooting
+
+    [Header("Effects")]
+    public GameObject effect; // ToDo: add particle system for shooting effect, and maybe a decal for hit effect
+
+    // internal state variables
+    public bool isReloading = false;
+    public bool isEmpty = false;
+
     void Update()
     {
         AlignWeapon();
     }
 
+    void PlayEffects()
+    {
+        if (effect != null)
+        {
+            Instantiate(effect, transform.position, transform.rotation);
+        }
+    }
+
     public void Shoot()
     {
-        // The ray starts at the gun's position and goes in its 'forward' (Z axis)
+        if (isEmpty) return;
+        // StartCoroutine(PlayEffects()); ToDo: implement coroutine
+
         Ray ray = new Ray(transform.position, transform.forward);
         RaycastHit hit;
 
-        // Debug line to see the shot in the Scene view
+        // Debug line to see the shot in the Scene view ToDo: remove later
         Debug.DrawRay(transform.position, transform.forward * Range, Color.yellow, 0.1f);
 
         if (Physics.Raycast(ray, out hit, Range, HitLayers))

@@ -814,10 +814,10 @@ NavMeshAgent:
   m_Enabled: 0
   m_AgentTypeID: -1372625422
   m_Radius: 1.35
-  m_Speed: 1
+  m_Speed: 1.5
   m_Acceleration: 8
   avoidancePriority: 50
-  m_AngularSpeed: 60
+  m_AngularSpeed: 100
   m_StoppingDistance: 0
   m_AutoTraverseOffMeshLink: 1
   m_AutoBraking: 1
@@ -846,12 +846,9 @@ MonoBehaviour:
   playerLayer:
     serializedVersion: 2
     m_Bits: 8
-  idleSpeed: 0.5
-  pursueSpeed: 1
-  turningSpeed: 1
-  headTurnSpeed: 1.5
   patrolRadius: 5
   maxSearchTime: 30
+  maxStunTime: 1
   groundLayer:
     serializedVersion: 2
     m_Bits: 512

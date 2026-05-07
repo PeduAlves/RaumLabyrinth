@@ -24,13 +24,13 @@ public class Enemy : MonoBehaviour
     // internal state variables
     private Vector3 lastTargetPosition = Vector3.zero;
     private float searchTimer = 0f;
-    private bool pursuing = false;
-    private bool walking = false;
-    private bool searching = false;
+    private bool isPursuing = false;
+    private bool isWalking = false;
+    private bool isSearching = false;
     private bool hasLanded = false;
-    private bool stunned = false;
+    private bool isStunned = false;
     // private bool cripped = false; This exists in case of implementing the crippled state, which would be a state where the enemy is not fully disabled but has reduced movement capabilities.
-    private bool disabled = false;
+    private bool isDisabled = false;
     private float stunTimer = 0f;
 
     void Start()
@@ -63,7 +63,7 @@ public class Enemy : MonoBehaviour
 
     void GoToLocation(Vector3 location)
     {
-        walking = true;
+        isWalking = true;
 
         Vector3 adjustedTargetPosition = new Vector3(location.x, transform.position.y, location.z);
 
@@ -88,7 +88,7 @@ public class Enemy : MonoBehaviour
             {
                 Debug.DrawRay(headCenter, targetDirection * distanciaParaAlvo, Color.green);
                 lastTargetPosition = target.transform.position;
-                pursuing = true;
+                isPursuing = true;
             }
         }
     }
@@ -111,7 +111,7 @@ public class Enemy : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (stunned)
+        if (isStunned)
         {
             stunTimer -= Time.deltaTime;
             if (stunTimer <= 0f)
@@ -120,34 +120,34 @@ public class Enemy : MonoBehaviour
             }
             return;
         }
-        if (disabled) return;
-        if (pursuing)
+        if (isDisabled) return;
+        if (isPursuing)
         {
             PursuePlayer();
         }
-        else if (searching && !walking)
+        else if (isSearching && !isWalking)
         {
             SearchPlayer();
         }
-        else if (!walking) 
+        else if (!isWalking) 
         {
             Patrol(spawnLocation);
         }
         if (!agent.pathPending && agent.remainingDistance <= 0.5f)
         {
-            walking = false;
-            if (pursuing)
+            isWalking = false;
+            if (isPursuing)
             {
-                pursuing = false; 
-                searching = true;
+                isPursuing = false; 
+                isSearching = true;
             }
         }
-        if (searching)
+        if (isSearching)
         {
             searchTimer += Time.deltaTime;
             if (searchTimer >= maxSearchTime)
             {
-                searching = false;
+                isSearching = false;
                 searchTimer = 0f;
             }
         }
@@ -163,15 +163,15 @@ public class Enemy : MonoBehaviour
 
     public void Stun(float time)
     {
-        stunned = true;
+        isStunned = true;
         stunTimer = time;
         agent.enabled = false;
     }
 
     void Unstun()
     {
-        stunned = false;
-        if (!disabled) agent.enabled = true;
+        isStunned = false;
+        if (!isDisabled) agent.enabled = true;
     }
 
     internal void TakeDamage(EnemyDamagablePart part)
@@ -198,7 +198,7 @@ public class Enemy : MonoBehaviour
     void HeadDamamage()
     {
         agent.enabled = false;
-        disabled = true;
+        isDisabled = true;
     }
 
     void ArmDamage()
@@ -237,7 +237,7 @@ public class Enemy : MonoBehaviour
     void HeadHealing()
     {
         agent.enabled = true;
-        disabled = false;
+        isDisabled = false;
     }
 
     void ArmHEaling()
