@@ -4,31 +4,56 @@ using UnityEngine.AI;
 public class Enemy : MonoBehaviour
 {
 
+    // components and references
     private SphereCollider visionRange;
     private Vector3 spawnLocation;
     private NavMeshAgent agent;
+
+    [Header("Perception Settings")]
     [SerializeField] private float visionAngle = 80f;
     [SerializeField] private float perceptionDistance = 5;
-    [SerializeField] private LayerMask playerLayer;
     [SerializeField] private LayerMask obstacleLayer;
-    [SerializeField] private float idleSpeed = 0.5f;
-    [SerializeField] private float pursueSpeed = 1;
-    [SerializeField] private float turningSpeed = 1;
-    [SerializeField] private float headTurnSpeed = 1.5f;
+    [SerializeField] private LayerMask playerLayer;
+
+    [Header("Movement Settings")]
     [SerializeField] private float patrolRadius = 5f;
     [SerializeField] private float maxSearchTime = 30f;
-    private Vector3 lastTargetPosition = Vector3.zero;
-    public float searchTimer = 0f; //ToDo: make it private
-    public bool pursuing = false; //ToDo: make it private
-    public bool walking = false; //ToDo: make it private
-    public bool searching = false; //ToDo: make it private
+    [SerializeField] private float maxStunTime = 2f;
+    [SerializeField] private LayerMask groundLayer;
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
+    // internal state variables
+    private Vector3 lastTargetPosition = Vector3.zero;
+    private float searchTimer = 0f;
+    private bool pursuing = false;
+    private bool walking = false;
+    private bool searching = false;
+    private bool hasLanded = false;
+    private bool stunned = false;
+    // private bool cripped = false; This exists in case of implementing the crippled state, which would be a state where the enemy is not fully disabled but has reduced movement capabilities.
+    private bool disabled = false;
+    private float stunTimer = 0f;
+
     void Start()
     {
         visionRange = GetComponent<SphereCollider>();
         spawnLocation = transform.position;
         agent = GetComponent<NavMeshAgent>();
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+
+        if (hasLanded) return;
+
+        if (((1 << collision.gameObject.layer) & groundLayer) != 0)
+        {
+
+            agent.enabled = true;
+
+            Destroy(GetComponent<Rigidbody>());
+            Destroy(GetComponent<BoxCollider>());
+            hasLanded = true;
+        }
     }
 
     Vector3 ChooseRandomPoint(Vector3 startingPoint)
@@ -86,6 +111,16 @@ public class Enemy : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if (stunned)
+        {
+            stunTimer -= Time.deltaTime;
+            if (stunTimer <= 0f)
+            {
+                Unstun();
+            }
+            return;
+        }
+        if (disabled) return;
         if (pursuing)
         {
             PursuePlayer();
@@ -125,4 +160,96 @@ public class Enemy : MonoBehaviour
             PlayerDetector(other);
         }
     }
+
+    public void Stun(float time)
+    {
+        stunned = true;
+        stunTimer = time;
+        agent.enabled = false;
+    }
+
+    void Unstun()
+    {
+        stunned = false;
+        if (!disabled) agent.enabled = true;
+    }
+
+    internal void TakeDamage(EnemyDamagablePart part)
+    {
+        if (part == EnemyDamagablePart.Head)
+        {
+            HeadDamamage();
+        }
+        else if (part == EnemyDamagablePart.Arm)
+        {
+            ArmDamage();
+        }
+        else if (part == EnemyDamagablePart.Leg)
+        {
+            LegDamage();
+        }
+        else if (part == EnemyDamagablePart.Torso)
+        {
+            throw new System.NotImplementedException("Standard damage");
+        }
+
+    }
+
+    void HeadDamamage()
+    {
+        agent.enabled = false;
+        disabled = true;
+    }
+
+    void ArmDamage()
+    {
+        Stun(maxStunTime);
+    }
+
+    void LegDamage()
+    {
+        agent.acceleration *= 0.5f;
+        agent.speed *= 0.5f;
+        // cripped = true;
+        Stun(maxStunTime);
+    }
+
+    internal void Heal(EnemyDamagablePart part)
+    {
+        if (part == EnemyDamagablePart.Head)
+        {
+            HeadHealing();
+        }
+        else if (part == EnemyDamagablePart.Arm)
+        {
+            ArmHEaling();
+        }
+        else if (part == EnemyDamagablePart.Leg)
+        {
+            LegHealing();
+        }
+        else if (part == EnemyDamagablePart.Torso)
+        {
+            throw new System.NotImplementedException("Standard healing");
+        }
+    }
+
+    void HeadHealing()
+    {
+        agent.enabled = true;
+        disabled = false;
+    }
+
+    void ArmHEaling()
+    {
+        throw new System.NotImplementedException("Enabling attacks");
+    }
+
+    void LegHealing()
+    {
+        agent.acceleration *= 2f;
+        agent.speed *= 2f;
+        // cripped = false;
+    }
+
 }
