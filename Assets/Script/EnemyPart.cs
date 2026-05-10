@@ -2,30 +2,30 @@ using UnityEngine;
 
 public class EnemyPart : MonoBehaviour, Damagable
 {
-    [SerializeField]
-    private EnemyDamagablePart part;
+
+    public EnemyDamagablePart partType;
     [SerializeField]
     private int MAX_HEALTH = 1;
     [SerializeField]
     private float regenerationTime = 15f;
 
-    private MeshRenderer mesh;
-    private MeshCollider collider;
+    private SkinnedMeshRenderer mesh;
+    public bool isDisabled = false;
     private float regenerationTimer = 0f;
     private int health;
 
     private Enemy mainBody;
     public void TakeDamage(int amount)
     {
+        if (isDisabled) return;
         health -= amount;
         if (health <= 0)
         {
             health = 0;
             mesh.enabled = false;
-            collider.enabled = false;
-            mainBody.TakeDamage(part);
+            isDisabled = true;
+            mainBody.TakeDamage(partType);
         }
-        mainBody.Stun(0.5f);
         
     }
 
@@ -33,15 +33,14 @@ public class EnemyPart : MonoBehaviour, Damagable
     {
         health += 1;
         mesh.enabled = true;
-        collider.enabled = true;
-        mainBody.Heal(part);
+        isDisabled = false;
+        mainBody.Heal(partType);
     }
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        mesh = GetComponentsInChildren<MeshRenderer>()[1];
-        collider = GetComponent<MeshCollider>();
+        mesh = GetComponent<SkinnedMeshRenderer>();
         mainBody = GetComponentInParent<Enemy>();
         health = MAX_HEALTH;
     }

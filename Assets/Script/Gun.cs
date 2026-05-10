@@ -13,35 +13,41 @@ public class Gun : MonoBehaviour
     public float Range = 100f;
     public LayerMask HitLayers;
 
-    [Header("Shooting Settings")]
-    public float reloadTime = 2f; // Time to reload in seconds
-    public float recoilAmount = 1f; // Amount of recoil applied to the player when shooting
 
-    [Header("Effects")]
-    public GameObject effect; // ToDo: add particle system for shooting effect, and maybe a decal for hit effect
+    private Animator animator;
 
     // internal state variables
-    public bool isReloading = false;
-    public bool isEmpty = false;
+    public bool isReloading = true;
+    public bool isEmpty = true;
+
+    void Start()
+    {
+        animator = GetComponentInChildren<Animator>();
+    }
 
     void Update()
     {
         AlignWeapon();
     }
 
-    void PlayEffects()
+    public void Reload()
     {
-        if (effect != null)
-        {
-            Instantiate(effect, transform.position, transform.rotation);
-        }
+        if (isReloading) return;
+        isReloading = true;
+        animator.SetTrigger("Reload");
+    }
+
+    public void FinishReloading()
+    {
+        isReloading = false;
+        isEmpty = false;
     }
 
     public void Shoot()
     {
-        if (isEmpty) return;
+        if (isEmpty || isReloading) return;
         // StartCoroutine(PlayEffects()); ToDo: implement coroutine
-
+        animator.SetTrigger("Shoot");
         Ray ray = new Ray(transform.position, transform.forward);
         RaycastHit hit;
 
@@ -60,6 +66,12 @@ public class Gun : MonoBehaviour
             }
 
         }
+    }
+
+    public void FinishShooting()
+    {
+        isEmpty = true;
+        Reload();
     }
 
     void AlignWeapon()

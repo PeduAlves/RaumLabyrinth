@@ -6,11 +6,13 @@ using Unity.AI.Navigation;
 
 public class MazeGenerator : MonoBehaviour
 {
-    [Header("Configurações do Labirinto")]
+    [Header("Maze configuration")]
     public int Width = 30;
     public int Height = 30;
     public int Seed = 0;
     public float spacing = 4f;
+    [Range(0.01f, 0.5f)] public float wallThicknessRatio = 0.1f; // 10% do spacing
+    [Range(0.1f, 5f)] public float wallHeightRatio = 0.8f;      // 80% do spacing
 
     [Header("Game Objects")]
     public List<ObjectSpawnData> ObjectsToSpawn; // Arraste seu item/inimigo aqui
@@ -128,8 +130,8 @@ public class MazeGenerator : MonoBehaviour
         current.IsVisited = true;
         generationOrder.Add(current); 
         
-        current.MyWallThickness = 10f; 
-        current.MyWallHeight = 2f;
+        current.MyWallThickness = spacing * wallThicknessRatio; 
+        current.MyWallHeight = spacing * wallHeightRatio;
 
         stack.Push(current);
 
@@ -188,13 +190,19 @@ public class MazeGenerator : MonoBehaviour
         {
             Vector3 position = new Vector3(cell.X * spacing, 0, cell.Z * spacing);
             float offset = spacing / 2f;
-            float length = spacing / 3f;
+            float length = spacing;
 
-            // Instancia as paredes (Lógica mantida, mas agora segue a ordem do caminho)
+            // 1. SEMPRE desenha Topo e Direita se existirem
             if (cell.WallTop) BuildWall(position + new Vector3(0, 0, offset), Vector3.zero, length, cell.MyWallThickness, cell.MyWallHeight);
             if (cell.WallRight) BuildWall(position + new Vector3(offset, 0, 0), new Vector3(0, 90, 0), length, cell.MyWallThickness, cell.MyWallHeight);
-            if (cell.WallBottom) BuildWall(position + new Vector3(0, 0, -offset), Vector3.zero, length, cell.MyWallThickness, cell.MyWallHeight);
-            if (cell.WallLeft) BuildWall(position + new Vector3(-offset, 0, 0), new Vector3(0, 90, 0), length, cell.MyWallThickness, cell.MyWallHeight);
+
+            // 2. SÓ desenha Baixo e Esquerda se for a Borda do Labirinto
+            // Isso evita duplicar paredes com os vizinhos
+            if (cell.Z == 0 && cell.WallBottom)
+                BuildWall(position + new Vector3(0, 0, -offset), Vector3.zero, length, cell.MyWallThickness, cell.MyWallHeight);
+
+            if (cell.X == 0 && cell.WallLeft)
+                BuildWall(position + new Vector3(-offset, 0, 0), new Vector3(0, 90, 0), length, cell.MyWallThickness, cell.MyWallHeight);
 
             // Controle de fluxo da animação
             count++;

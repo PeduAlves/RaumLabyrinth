@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -16,59 +17,212 @@ public class Enemy : MonoBehaviour
     [SerializeField] private LayerMask playerLayer;
 
     [Header("Movement Settings")]
-    [SerializeField] private float patrolRadius = 5f;
+    [SerializeField] private float patrolRadius = 7f;
+    [Range(0f, 1f)] private float minPatrolRadiusPercentage = 0.5f;
+    private float minPatrolRadius;
     [SerializeField] private float maxSearchTime = 30f;
     [SerializeField] private float maxStunTime = 2f;
     [SerializeField] private LayerMask groundLayer;
 
     // internal state variables
+    private bool isPlayerInSight = false;
     private Vector3 lastTargetPosition = Vector3.zero;
     private float searchTimer = 0f;
-    private bool isPursuing = false;
-    private bool isWalking = false;
-    private bool isSearching = false;
-    private bool hasLanded = false;
-    private bool isStunned = false;
-    // private bool cripped = false; This exists in case of implementing the crippled state, which would be a state where the enemy is not fully disabled but has reduced movement capabilities.
-    private bool isDisabled = false;
     private float stunTimer = 0f;
+    private Dictionary<EnemyDamagablePart, EnemyPart> bodyParts = new Dictionary<EnemyDamagablePart, EnemyPart>();
+
+    [SerializeField] private bool isDisabled = false;
+    [SerializeField] private bool isStunned = false;
+    [SerializeField] private EnemyState[] states = new EnemyState[2];
+    [SerializeField] private EnemyMovementState movementState;
 
     void Start()
     {
+        minPatrolRadius = patrolRadius * minPatrolRadiusPercentage;
+        ChangeStates(EnemyState.Idle);
+        movementState = EnemyMovementState.Airborne;
         visionRange = GetComponent<SphereCollider>();
         spawnLocation = transform.position;
         agent = GetComponent<NavMeshAgent>();
+        
+        EnemyPart[] parts = GetComponentsInChildren<EnemyPart>();
+        foreach (EnemyPart part in parts)
+        {
+            bodyParts[part.partType] = part;
+        }
+    }
+
+    EnemyState getCurrentState()
+    {
+        return states[0];
+    }
+
+    EnemyState GetLastState()
+    {
+        return states[1];
+    }
+
+    void ChangeStates(EnemyState newState)
+    {
+        // This method can be expanded to include any necessary logic when changing states, such as resetting timers or triggering animations.
+        if (getCurrentState() == newState) return;
+        states[1] = states[0];
+        states[0] = newState;
+    }
+
+    void ChangeMovementState(EnemyMovementState newState)
+    {
+        // This method can be expanded to include any necessary logic when changing movement states, such as adjusting speed or enabling/disabling certain behaviors.
+        movementState = newState;
+    }
+
+    public void Stun()
+    {
+        isStunned = true;
+        stunTimer = maxStunTime;
+        agent.enabled = false;
+    }
+
+    void Unstun()
+    {
+        isStunned = false;
+        agent.enabled = true;
+    }
+
+    public void DisableAi()
+    {
+        isDisabled = true;
+        agent.enabled = false;
+    }
+
+    public void EnableAi()
+    {
+        isDisabled = false;
+        agent.enabled = true;
     }
 
     private void OnCollisionEnter(Collision collision)
     {
-
-        if (hasLanded) return;
-
-        if (((1 << collision.gameObject.layer) & groundLayer) != 0)
+        if (movementState == EnemyMovementState.Airborne)
         {
+            if (((1 << collision.gameObject.layer) & groundLayer) != 0)
+            {
 
-            agent.enabled = true;
+                agent.enabled = true;
 
-            Destroy(GetComponent<Rigidbody>());
-            Destroy(GetComponent<BoxCollider>());
-            hasLanded = true;
+                Destroy(GetComponent<Rigidbody>());
+                Destroy(GetComponent<BoxCollider>());
+                ChangeMovementState(EnemyMovementState.Idle);
+            }
         }
     }
 
     Vector3 ChooseRandomPoint(Vector3 startingPoint)
     {
-        return (Random.insideUnitSphere * patrolRadius) + startingPoint;
+        // 1. Gera uma direção aleatória em um círculo (eixo X e Z)
+        Vector2 randomDir = Random.insideUnitCircle.normalized;
+
+        // 2. Define uma distância aleatória entre o raio mínimo e o máximo
+        float randomDistance = Random.Range(minPatrolRadius, patrolRadius);
+
+        // 3. Calcula a posição final
+        Vector3 point = new Vector3(
+            randomDir.x * randomDistance,
+            0,
+            randomDir.y * randomDistance
+        );
+
+        return startingPoint + point;
     }
 
     void GoToLocation(Vector3 location)
     {
-        isWalking = true;
+        ChangeMovementState(EnemyMovementState.Moving);
 
         Vector3 adjustedTargetPosition = new Vector3(location.x, transform.position.y, location.z);
 
         agent.SetDestination(adjustedTargetPosition);
 
+    }
+
+    void Patrol(Vector3 areaCenter)
+    {
+        GoToLocation(ChooseRandomPoint(areaCenter));
+    }
+
+    // Update is called once per frame
+    // Working here primarely as a state machine controller
+    void Update()
+    {
+        if (isDisabled) return;
+
+        if (isStunned)
+        {
+            stunTimer -= Time.deltaTime;
+            if (stunTimer <= 0f)
+            {
+                Unstun();
+            } else return;
+        }
+
+        if (isPlayerInSight && getCurrentState() != EnemyState.Pursuing)
+        {
+            ChangeStates(EnemyState.Pursuing);
+        }
+
+        if (getCurrentState() == EnemyState.Pursuing) 
+        {
+            GoToLocation(lastTargetPosition);
+        }
+
+        if (!agent.pathPending && agent.remainingDistance <= 0.1f)
+        {
+            ChangeMovementState(EnemyMovementState.Idle);
+            if (getCurrentState() == EnemyState.Pursuing)
+            {
+                ChangeStates(EnemyState.Searching);
+            }
+        }
+
+        if (getCurrentState() == EnemyState.Searching)
+        {
+            searchTimer += Time.deltaTime;
+            if (searchTimer >= maxSearchTime)
+            {
+                ChangeStates(EnemyState.Idle);
+                searchTimer = 0f;
+            }
+        }
+
+        if (movementState == EnemyMovementState.Idle)
+        {
+            if (getCurrentState() == EnemyState.Searching)
+            {
+                Patrol(lastTargetPosition);
+                return;
+            }
+            if (getCurrentState() == EnemyState.Idle)
+            {
+                Patrol(spawnLocation);
+                return;
+            }
+        }
+    }
+
+    private void OnTriggerStay(Collider other)
+    {
+        if (((1 << other.gameObject.layer) & playerLayer) != 0)
+        {
+            PlayerDetector(other);
+        }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (((1 << other.gameObject.layer) & playerLayer) != 0)
+        {
+            if(isPlayerInSight) isPlayerInSight = false;
+        }
     }
 
     void PlayerDetector(Collider target)
@@ -83,173 +237,56 @@ public class Enemy : MonoBehaviour
             if (Physics.Raycast(headCenter, targetDirection, distanciaParaAlvo, obstacleLayer))
             {
                 Debug.DrawRay(headCenter, targetDirection * distanciaParaAlvo, Color.red);
+                isPlayerInSight = false;
             }
             else if (Physics.Raycast(headCenter, targetDirection, distanciaParaAlvo, playerLayer))
             {
                 Debug.DrawRay(headCenter, targetDirection * distanciaParaAlvo, Color.green);
                 lastTargetPosition = target.transform.position;
-                isPursuing = true;
+                isPlayerInSight = true;
             }
         }
-    }
-
-    void PursuePlayer()
-    {
-        GoToLocation(lastTargetPosition);
-    }
-
-    void Patrol(Vector3 areaCenter)
-    {
-        GoToLocation(ChooseRandomPoint(areaCenter));
-    }
-    
-    void SearchPlayer()
-    {
-        Patrol(lastTargetPosition);
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        if (isStunned)
-        {
-            stunTimer -= Time.deltaTime;
-            if (stunTimer <= 0f)
-            {
-                Unstun();
-            }
-            return;
-        }
-        if (isDisabled) return;
-        if (isPursuing)
-        {
-            PursuePlayer();
-        }
-        else if (isSearching && !isWalking)
-        {
-            SearchPlayer();
-        }
-        else if (!isWalking) 
-        {
-            Patrol(spawnLocation);
-        }
-        if (!agent.pathPending && agent.remainingDistance <= 0.5f)
-        {
-            isWalking = false;
-            if (isPursuing)
-            {
-                isPursuing = false; 
-                isSearching = true;
-            }
-        }
-        if (isSearching)
-        {
-            searchTimer += Time.deltaTime;
-            if (searchTimer >= maxSearchTime)
-            {
-                isSearching = false;
-                searchTimer = 0f;
-            }
-        }
-    }
-
-    private void OnTriggerStay(Collider other)
-    {
-        if (((1 << other.gameObject.layer) & playerLayer) != 0)
-        {
-            PlayerDetector(other);
-        }
-    }
-
-    public void Stun(float time)
-    {
-        isStunned = true;
-        stunTimer = time;
-        agent.enabled = false;
-    }
-
-    void Unstun()
-    {
-        isStunned = false;
-        if (!isDisabled) agent.enabled = true;
     }
 
     internal void TakeDamage(EnemyDamagablePart part)
     {
         if (part == EnemyDamagablePart.Head)
         {
-            HeadDamamage();
+            DisableAi();
         }
-        else if (part == EnemyDamagablePart.Arm)
+        else if (part == EnemyDamagablePart.LeftArm || part == EnemyDamagablePart.RightArm)
         {
-            ArmDamage();
+            Stun();
         }
-        else if (part == EnemyDamagablePart.Leg)
+        else if (part == EnemyDamagablePart.LeftLeg || part == EnemyDamagablePart.RightLeg)
         {
-            LegDamage();
+            agent.acceleration *= 0.5f;
+            agent.speed *= 0.5f;
+            // cripped = true;
+            Stun();
         }
         else if (part == EnemyDamagablePart.Torso)
         {
-            throw new System.NotImplementedException("Standard damage");
+            throw new System.NotImplementedException("Mas O torço é implacável!");
         }
 
-    }
-
-    void HeadDamamage()
-    {
-        agent.enabled = false;
-        isDisabled = true;
-    }
-
-    void ArmDamage()
-    {
-        Stun(maxStunTime);
-    }
-
-    void LegDamage()
-    {
-        agent.acceleration *= 0.5f;
-        agent.speed *= 0.5f;
-        // cripped = true;
-        Stun(maxStunTime);
     }
 
     internal void Heal(EnemyDamagablePart part)
     {
         if (part == EnemyDamagablePart.Head)
         {
-            HeadHealing();
+            EnableAi();
         }
-        else if (part == EnemyDamagablePart.Arm)
+        else if (part == EnemyDamagablePart.LeftLeg || part == EnemyDamagablePart.RightLeg)
         {
-            ArmHEaling();
-        }
-        else if (part == EnemyDamagablePart.Leg)
-        {
-            LegHealing();
+            agent.acceleration *= 2f;
+            agent.speed *= 2f;
+            // cripped = false;
         }
         else if (part == EnemyDamagablePart.Torso)
         {
             throw new System.NotImplementedException("Standard healing");
         }
     }
-
-    void HeadHealing()
-    {
-        agent.enabled = true;
-        isDisabled = false;
-    }
-
-    void ArmHEaling()
-    {
-        throw new System.NotImplementedException("Enabling attacks");
-    }
-
-    void LegHealing()
-    {
-        agent.acceleration *= 2f;
-        agent.speed *= 2f;
-        // cripped = false;
-    }
-
 }

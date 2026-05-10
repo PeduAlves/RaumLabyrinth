@@ -1369,7 +1369,7 @@ PrefabInstance:
       objectReference: {fileID: 885341037}
     - target: {fileID: 3203574012870503850, guid: 087016808b63c259593db58b13afa54a, type: 3}
       propertyPath: spacing
-      value: 15
+      value: 20
       objectReference: {fileID: 0}
     - target: {fileID: 3203574012870503850, guid: 087016808b63c259593db58b13afa54a, type: 3}
       propertyPath: mapCamera
@@ -1430,7 +1430,7 @@ PrefabInstance:
     - target: {fileID: 3203574012870503850, guid: 087016808b63c259593db58b13afa54a, type: 3}
       propertyPath: ObjectsToSpawn.Array.data[1].ObjectToSpawn
       value: 
-      objectReference: {fileID: 4376462351248262209, guid: 1f572ba37e884074989a064710f9f996, type: 3}
+      objectReference: {fileID: 8220541279543890296, guid: 534139604e8e58d42b46c0f80440e001, type: 3}
     - target: {fileID: 6367474873025907011, guid: 087016808b63c259593db58b13afa54a, type: 3}
       propertyPath: m_LocalPosition.x
       value: -0
