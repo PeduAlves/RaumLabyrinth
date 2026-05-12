@@ -34,7 +34,6 @@ public class Gun : MonoBehaviour
     {
         if (isReloading) return;
         isReloading = true;
-        animator.SetTrigger("Reload");
     }
 
     public void FinishReloading()
@@ -45,7 +44,8 @@ public class Gun : MonoBehaviour
 
     public void Shoot()
     {
-        if (isEmpty || isReloading) return;
+        if (isEmpty) return;
+        isEmpty = true;
         // StartCoroutine(PlayEffects()); ToDo: implement coroutine
         animator.SetTrigger("Shoot");
         Ray ray = new Ray(transform.position, transform.forward);
@@ -66,12 +66,6 @@ public class Gun : MonoBehaviour
             }
 
         }
-    }
-
-    public void FinishShooting()
-    {
-        isEmpty = true;
-        Reload();
     }
 
     void AlignWeapon()
