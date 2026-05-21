@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 7a3fd3edbffd86a4f931496e867ae3e5
+guid: 7fe78ab56e46c744a8b2230a42497d2e
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
@@ -9,11 +9,6 @@ ModelImporter:
       assembly: UnityEngine.CoreModule
       name: GunEffect1
     second: {fileID: 2100000, guid: a036dc70492f5ad42b3919183ff6de54, type: 2}
-  - first:
-      type: UnityEngine:Texture2D
-      assembly: UnityEngine.CoreModule
-      name: GunEffect1
-    second: {fileID: 2800000, guid: 2d605df1b4f5e5e43a4b649273a8c7ad, type: 3}
   materials:
     materialImportMode: 2
     materialName: 0

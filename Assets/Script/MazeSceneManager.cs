@@ -4,6 +4,7 @@ public class MazeSceneManager : MonoBehaviour
 {
 
     [SerializeField] private GameObject gameOverUI;
+    [SerializeField] private GameObject gameClearUI;
 
     public void showGameOver()
     {
@@ -11,6 +12,13 @@ public class MazeSceneManager : MonoBehaviour
         Cursor.visible = true;
         Cursor.lockState = CursorLockMode.None;
         gameOverUI.SetActive(true);
+    }
+
+    public void showGameClear()
+    {
+        Cursor.visible = true;
+        Cursor.lockState = CursorLockMode.None;
+        gameClearUI.SetActive(true);
     }
 
     public void ReturnToMainMenu()

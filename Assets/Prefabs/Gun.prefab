@@ -63,7 +63,7 @@ Transform:
   - {fileID: 9109733899672482651}
   m_Father: {fileID: 2974760804740248090}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &2598841823249479516
+--- !u!1 &2511217094964353890
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -71,37 +71,46 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 2134636740535410250}
-  - component: {fileID: 7433683865579161593}
+  - component: {fileID: 2995582081000358360}
+  - component: {fileID: 2179084287826087549}
+  - component: {fileID: 4168467197512039095}
   m_Layer: 0
-  m_Name: GunEffect1
+  m_Name: GunEffects1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &2134636740535410250
+--- !u!4 &2995582081000358360
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2598841823249479516}
+  m_GameObject: {fileID: 2511217094964353890}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.690608, y: 0.15445367, z: -0.15185992, w: -0.69003135}
-  m_LocalPosition: {x: 0.0031820214, y: 0.02000004, z: 0.44008225}
-  m_LocalScale: {x: 0.45870817, y: 0.45870817, z: 0.45870817}
+  m_LocalRotation: {x: -0.00000014166211, y: 2.660285e-10, z: 0.0018779055, w: 0.9999983}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 0.01, y: 0.01, z: 0.01}
   m_ConstrainProportionsScale: 1
   m_Children: []
-  m_Father: {fileID: 1484208606819487543}
-  m_LocalEulerAnglesHint: {x: -64.982, y: 269.784, z: 90}
---- !u!137 &7433683865579161593
-SkinnedMeshRenderer:
+  m_Father: {fileID: 5139472794584678244}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!33 &2179084287826087549
+MeshFilter:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2598841823249479516}
+  m_GameObject: {fileID: 2511217094964353890}
+  m_Mesh: {fileID: -6088842367664589167, guid: 7fe78ab56e46c744a8b2230a42497d2e, type: 3}
+--- !u!23 &4168467197512039095
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2511217094964353890}
   m_Enabled: 1
   m_CastShadows: 1
   m_ReceiveShadows: 1
@@ -110,7 +119,7 @@ SkinnedMeshRenderer:
   m_MotionVectors: 1
   m_LightProbeUsage: 1
   m_ReflectionProbeUsage: 1
-  m_RayTracingMode: 3
+  m_RayTracingMode: 2
   m_RayTraceProcedural: 0
   m_RayTracingAccelStructBuildFlagsOverride: 0
   m_RayTracingAccelStructBuildFlags: 1
@@ -139,24 +148,7 @@ SkinnedMeshRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  serializedVersion: 2
-  m_Quality: 0
-  m_UpdateWhenOffscreen: 0
-  m_SkinnedMotionVectors: 1
-  m_Mesh: {fileID: -6088842367664589167, guid: cc38a7d9a18ae6e428119c8f58600016, type: 3}
-  m_Bones:
-  - {fileID: 1289855147755282022}
-  - {fileID: 2974760804740248090}
-  - {fileID: 4097042926834853686}
-  - {fileID: 1323780054103490249}
-  - {fileID: 1916741639898621015}
-  - {fileID: 5139472794584678244}
-  m_BlendShapeWeights: []
-  m_RootBone: {fileID: 1289855147755282022}
-  m_AABB:
-    m_Center: {x: -2.0679515e-25, y: 0.0051732925, z: 0.0020439383}
-    m_Extent: {x: 0, y: 0, z: 0}
-  m_DirtyAABB: 0
+  m_AdditionalVertexStreams: {fileID: 0}
 --- !u!1 &4309431117614945944
 GameObject:
   m_ObjectHideFlags: 0
@@ -183,9 +175,10 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: -0, y: 0.0051732934, z: 0.0020439418}
-  m_LocalScale: {x: 0, y: 0, z: 0}
-  m_ConstrainProportionsScale: 0
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 1
   m_Children:
+  - {fileID: 2995582081000358360}
   - {fileID: 2193735669090849154}
   m_Father: {fileID: 1289855147755282022}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -286,7 +279,6 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 2134636740535410250}
   - {fileID: 5211948901209805013}
   - {fileID: 2451102177753145199}
   m_Father: {fileID: 0}
@@ -331,8 +323,6 @@ MonoBehaviour:
   HitLayers:
     serializedVersion: 2
     m_Bits: 1015
-  reloadTime: 2
-  recoilAmount: 1
   isReloading: 0
   isEmpty: 0
 --- !u!1 &5160045503581569724

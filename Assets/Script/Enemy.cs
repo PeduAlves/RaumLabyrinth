@@ -28,14 +28,16 @@ public class Enemy : MonoBehaviour
     [SerializeField] private SphereCollider rightFistCollider;
     [SerializeField] private SphereCollider leftFistCollider;
     [SerializeField] private float attackRange = 3f;
+    [SerializeField] private GameObject shokwavePrefab;
 
     [Header("State Variables")]
     [SerializeField] private bool isDisabled = false;
     [SerializeField] private bool isStunned = false;
-    [SerializeField] private EnemyState[] states = new EnemyState[2];
-    [SerializeField] private EnemyMovementState movementState;
+    [SerializeField] private bool isSearching = false;
+    [SerializeField] private EnemyState[] states = new EnemyState[2];   //ToDo: remove serializefield
+    [SerializeField] private EnemyMovementState movementState;          //ToDo: remove serializefield
     private bool isPlayerInSight = false;
-    private Vector3 lastTargetPosition = Vector3.zero;
+    private Vector3 lastTargetPosition;
     private float searchTimer = 0f;
     private float stunTimer = 0f;
     private Dictionary<EnemyDamagablePart, EnemyPart> bodyParts = new Dictionary<EnemyDamagablePart, EnemyPart>();
@@ -45,10 +47,11 @@ public class Enemy : MonoBehaviour
     {
         animator = GetComponent<Animator>();
         minPatrolRadius = patrolRadius * minPatrolRadiusPercentage;
-        ChangeStates(EnemyState.Idle);
+        ChangeStates(EnemyState.Broke);
         movementState = EnemyMovementState.Airborne;
         visionRange = GetComponent<SphereCollider>();
         spawnLocation = transform.position;
+        lastTargetPosition = spawnLocation;
         agent = GetComponent<NavMeshAgent>();
         
         EnemyPart[] parts = GetComponentsInChildren<EnemyPart>();
@@ -74,6 +77,7 @@ public class Enemy : MonoBehaviour
         if (getCurrentState() == newState) return;
         states[1] = states[0];
         states[0] = newState;
+        animator.SetTrigger(newState.GetAnimationTrigger());
     }
 
     void ChangeMovementState(EnemyMovementState newState)
@@ -87,18 +91,21 @@ public class Enemy : MonoBehaviour
         isStunned = true;
         stunTimer = maxStunTime;
         agent.isStopped = true;
+        ChangeStates(EnemyState.Broke);
     }
 
     void Unstun()
     {
         isStunned = false;
         agent.isStopped = false;
+        ChangeStates(GetLastState());
     }
 
     public void DisableAi()
     {
         isDisabled = true;
         agent.enabled = false;
+        ChangeStates(EnemyState.Broke);
     }
 
     public void EnableAi()
@@ -108,6 +115,10 @@ public class Enemy : MonoBehaviour
         if (isStunned)
         {
             Unstun();
+        }
+        else
+        {
+            ChangeStates(GetLastState());
         }
     }
 
@@ -123,6 +134,7 @@ public class Enemy : MonoBehaviour
                 Destroy(GetComponent<Rigidbody>());
                 Destroy(GetComponent<BoxCollider>());
                 ChangeMovementState(EnemyMovementState.Idle);
+                ChangeStates(EnemyState.Looking);
             }
         }
     }
@@ -148,9 +160,10 @@ public class Enemy : MonoBehaviour
     void GoToLocation(Vector3 location)
     {
         ChangeMovementState(EnemyMovementState.Moving);
+        ChangeStates(EnemyState.Walking);
 
         Vector3 adjustedTargetPosition = new Vector3(location.x, transform.position.y, location.z);
-
+        if (agent.isStopped) agent.isStopped = false;
         agent.SetDestination(adjustedTargetPosition);
 
     }
@@ -175,46 +188,55 @@ public class Enemy : MonoBehaviour
             } else return;
         }
 
-        if (isPlayerInSight && getCurrentState() != EnemyState.Pursuing)
+        if (isSearching)
         {
-            ChangeStates(EnemyState.Pursuing);
+            searchTimer -= Time.deltaTime;
+
+            if (searchTimer <= 0f)
+            {
+                isSearching = false;
+            }
         }
 
-        if (getCurrentState() == EnemyState.Pursuing) 
-        {
-            GoToLocation(lastTargetPosition);
-        }
-
-        if (!agent.pathPending && agent.remainingDistance <= 0.1f)
+        if (movementState == EnemyMovementState.Moving && !agent.pathPending && agent.remainingDistance <= 0.1f)
         {
             ChangeMovementState(EnemyMovementState.Idle);
-            if (getCurrentState() == EnemyState.Pursuing)
+            ChangeStates(EnemyState.Looking);
+        }
+    }
+
+    public void FinishLooking()
+    {
+        if (isSearching) Patrol(lastTargetPosition);
+        else Patrol(spawnLocation);
+    }
+
+    private void PlayerSpotted(Vector3? targetPosition)
+    {
+        if (targetPosition.HasValue)
+        {
+            isPlayerInSight = true;
+            if (Vector3.Distance(lastTargetPosition, targetPosition.Value) > 1f || getCurrentState() != EnemyState.Walking)
             {
-                ChangeStates(EnemyState.Searching);
+                lastTargetPosition = targetPosition.Value;
+                GoToLocation(lastTargetPosition);
             }
         }
-
-        if (getCurrentState() == EnemyState.Searching)
+        else
         {
-            searchTimer += Time.deltaTime;
-            if (searchTimer >= maxSearchTime)
-            {
-                ChangeStates(EnemyState.Idle);
-                searchTimer = 0f;
-            }
+            isPlayerInSight = false;
+            isSearching = true;
+            searchTimer = maxSearchTime;
         }
+    }
 
-        if (movementState == EnemyMovementState.Idle)
+    private void OnTriggerExit(Collider other)
+    {
+        if (((1 << other.gameObject.layer) & playerLayer) != 0)
         {
-            if (getCurrentState() == EnemyState.Searching)
+            if (isPlayerInSight)
             {
-                Patrol(lastTargetPosition);
-                return;
-            }
-            if (getCurrentState() == EnemyState.Idle)
-            {
-                Patrol(spawnLocation);
-                return;
+                PlayerSpotted(null);
             }
         }
     }
@@ -227,37 +249,32 @@ public class Enemy : MonoBehaviour
         }
     }
 
-    private void OnTriggerExit(Collider other)
-    {
-        if (((1 << other.gameObject.layer) & playerLayer) != 0)
-        {
-            if(isPlayerInSight) isPlayerInSight = false;
-        }
-    }
-
     void PlayerDetector(Collider target)
     {
+        if (isDisabled || isStunned || getCurrentState() == EnemyState.Attacking) return;
+
         Vector3 headCenter = transform.TransformPoint(visionRange.center);
         Vector3 targetDirection = (target.transform.position - headCenter).normalized;
+        float targetDistance = Vector3.Distance(headCenter, target.transform.position);
+
+        // 1. Faz as checagens de visão PRIMEIRO, independente de onde o alvo está
         if ((Vector3.Angle(transform.forward, targetDirection) < visionAngle / 2) ||
             (Vector3.Distance(transform.position, target.transform.position) < perceptionDistance))
         {
-            float distanciaParaAlvo = Vector3.Distance(headCenter, target.transform.position);
-
-            if (Physics.Raycast(headCenter, targetDirection, distanciaParaAlvo, obstacleLayer))
+            if (Physics.Raycast(headCenter, targetDirection, targetDistance, obstacleLayer))
             {
-                Debug.DrawRay(headCenter, targetDirection * distanciaParaAlvo, Color.red);
-                isPlayerInSight = false;
+                Debug.DrawRay(headCenter, targetDirection * targetDistance, Color.red);
+                PlayerSpotted(null);
             }
-            else if (Physics.Raycast(headCenter, targetDirection, distanciaParaAlvo, playerLayer))
+            else if (Physics.Raycast(headCenter, targetDirection, targetDistance, playerLayer))
             {
-                Debug.DrawRay(headCenter, targetDirection * distanciaParaAlvo, Color.green);
-                lastTargetPosition = target.transform.position;
-                isPlayerInSight = true;
+                Debug.DrawRay(headCenter, targetDirection * targetDistance, Color.green);
+
+                PlayerSpotted(target.transform.position);
             }
         }
 
-        if (Vector3.Distance(transform.position, target.transform.position) <= attackRange)
+        if (Vector3.Distance(transform.position, target.transform.position) <= attackRange && getCurrentState() != EnemyState.Attacking)
         {
             ExecuteAttack(target.transform.position);
         }
@@ -307,50 +324,39 @@ public class Enemy : MonoBehaviour
 
     void ExecuteAttack(Vector3 playerPos)
     {
-        // Vetor direção do inimigo para o player (ignora altura Y para precisão)
-        Vector3 dirToPlayer = (playerPos - transform.position);
-        dirToPlayer.y = 0;
-        dirToPlayer.Normalize();
-
-        // Produto escalar com os eixos do inimigo
-        float forwardDot = Vector3.Dot(transform.forward, dirToPlayer);
-        float rightDot = Vector3.Dot(transform.right, dirToPlayer);
-
-        EnemyDamagablePart attackingMember;
-
-        // Lógica de Quadrantes
-        if (forwardDot >= 0) // Na Frente
+        if (bodyParts[EnemyDamagablePart.RightArm].isDisabled && bodyParts[EnemyDamagablePart.LeftArm].isDisabled)
         {
-            if (rightDot >= 0) attackingMember = EnemyDamagablePart.RightArm;
-            else attackingMember = EnemyDamagablePart.LeftArm;
-        }
-        else // Atrás
-        {
-            // Se o player está atrás do ombro direito, atacamos com a esquerda (invertido)
-            if (rightDot >= 0) attackingMember = EnemyDamagablePart.LeftArm;
-            else attackingMember = EnemyDamagablePart.RightArm;
+            // Both arms are disabled, cannot attack
+            return;
         }
 
-        if (attackingMember == EnemyDamagablePart.RightArm && !bodyParts[EnemyDamagablePart.RightArm].isDisabled)
-        {
+        ChangeMovementState(EnemyMovementState.Idle);
+        agent.isStopped = true;
+        ChangeStates(EnemyState.Attacking);
 
-            agent.isStopped = true;
-            animator.SetTrigger("RightPunch");
+        if (!bodyParts[EnemyDamagablePart.RightArm].isDisabled)
             rightFistCollider.enabled = true;
-        }
             
-        else if (attackingMember == EnemyDamagablePart.LeftArm && !bodyParts[EnemyDamagablePart.LeftArm].isDisabled)
-        {
-            agent.isStopped = true;
-            animator.SetTrigger("LeftPunch");
+        if (!bodyParts[EnemyDamagablePart.LeftArm].isDisabled)
             leftFistCollider.enabled = true;
-        }
-            
         
     }
 
+    void SpawnShokwave()
+    {
+        if (!bodyParts[EnemyDamagablePart.RightArm].isDisabled)
+        {
+            Instantiate(shokwavePrefab, rightFistCollider.transform.position, shokwavePrefab.transform.rotation);
+        }
+
+        if (!bodyParts[EnemyDamagablePart.LeftArm].isDisabled)
+        {
+            Instantiate(shokwavePrefab, leftFistCollider.transform.position, shokwavePrefab.transform.rotation);
+        }
+    }
+
     void EndAttack() {
-        agent.isStopped = false;
+        ChangeStates(EnemyState.Looking);
         rightFistCollider.enabled = false;
         leftFistCollider.enabled = false;
     }

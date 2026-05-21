@@ -5,8 +5,14 @@ public class FirstPersonShooter : MonoBehaviour, Damagable
 
     private Gun equipedWeapom;
 
+    [Header("UI Settings")]
+    [SerializeField] private GameObject damageOverlay;
+
     [Header("Player Stats")]
-    [SerializeField] private int maxHealth = 1;
+    [SerializeField] private int maxHealth = 2;
+    [SerializeField] private float regenRate = 5f;
+    private bool isDamaged = false;
+    private float damageTimer = 0f;
     private int currentHealth;
 
     [Header("UI Elements")]
@@ -15,6 +21,8 @@ public class FirstPersonShooter : MonoBehaviour, Damagable
     public void TakeDamage(int amount)
     {
         currentHealth -= amount;
+        isDamaged = true;
+        damageOverlay.SetActive(true);
         if (currentHealth <= 0)
         {
             Die();
@@ -43,6 +51,21 @@ public class FirstPersonShooter : MonoBehaviour, Damagable
         if (Input.GetButtonDown("Fire1"))
         {
             equipedWeapom.Shoot();
+        }
+
+        if (isDamaged)
+        {
+            damageTimer += Time.deltaTime;
+            if (damageTimer >= regenRate)
+            {
+                currentHealth +=1;
+                damageTimer = 0f;
+                if (currentHealth == maxHealth)
+                {
+                    isDamaged = false;
+                    damageOverlay.SetActive(false);
+                }
+            }
         }
     }
 

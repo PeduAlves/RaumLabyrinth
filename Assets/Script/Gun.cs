@@ -46,8 +46,11 @@ public class Gun : MonoBehaviour
     {
         if (isEmpty) return;
         isEmpty = true;
-        // StartCoroutine(PlayEffects()); ToDo: implement coroutine
         animator.SetTrigger("Shoot");
+    }
+
+    public void FinishShooting()
+    {
         Ray ray = new Ray(transform.position, transform.forward);
         RaycastHit hit;
 
