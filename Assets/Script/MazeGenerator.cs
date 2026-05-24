@@ -11,21 +11,21 @@ public class MazeGenerator : MonoBehaviour
     public int Height = 30;
     public int Seed = 0;
     public float spacing = 4f;
-    [Range(0.01f, 0.5f)] public float wallThicknessRatio = 0.1f; // 10% do spacing
-    [Range(0.1f, 5f)] public float wallHeightRatio = 0.8f;      // 80% do spacing
+    [Range(0.01f, 0.5f)] public float wallThicknessRatio = 0.1f;
+    [Range(0.1f, 5f)] public float wallHeightRatio = 0.8f;
 
     [Header("Game Objects")]
-    public List<ObjectSpawnData> ObjectsToSpawn; // Arraste seu item/inimigo aqui
-    public NavMeshSurface enemyNavmeshSurface; // Referência ao NavMeshSurface para os inimigos navegarem
+    public List<ObjectSpawnData> ObjectsToSpawn;
+    public NavMeshSurface enemyNavmeshSurface;
 
     public GameObject run;
     public GameObject map;
 
     [Header("Camera & Animations")]
-    public Camera mainCamera; // Main player camera object
-    public Camera mapCamera; // Map camera object
-    public float cameraFlyingTime = 2.0f; // 1st person transitioning time
-    public int wallPerFrame = 5; // The amount of wall appear per frame (higher number accelerate the process)
+    public Camera mainCamera;
+    public Camera mapCamera;
+    public float cameraFlyingTime = 2.0f;
+    public int wallPerFrame = 5;
 
     [Header("Prefabs")]
     public GameObject WallPrefab;
@@ -33,24 +33,27 @@ public class MazeGenerator : MonoBehaviour
     public GameObject PlayerPrefab;
     public GameObject mapUI;
 
+    // ✅ NOVO: Referência ao ChunkManager
+    [Header("Otimização")]
+    [Tooltip("Arraste aqui o GameObject com o script MazeChunkManager")]
+    public MazeChunkManager chunkManager;
+
     // Dados internos
     private MazeCell[,] grid;
     private float cellHeight;
     private float cellThickness;
     private List<MazeCell> generationOrder;
 
-    // --- CLASSE MAZE CELL (Mantida igual) ---
     public class MazeCell
     {
         public bool IsVisited = false;
         public bool WallTop = true, WallRight = true, WallBottom = true, WallLeft = true;
         public GameObject WallTopObject, WallRightObject, WallBottomObject, WallLeftObject;
         public float MyWallThickness, MyWallHeight;
-        // Adicione isso junto com as outras variáveis privadas
         public int X, Z;
         public MazeCell(int x, int z) { X = x; Z = z; }
     }
-    
+
     [System.Serializable]
     public struct ObjectSpawnData
     {
@@ -61,54 +64,57 @@ public class MazeGenerator : MonoBehaviour
 
     void Start()
     {
-        // Iniciamos a sequência cinematográfica
         StartCoroutine(GenerationSequence());
     }
 
-    // --- ORQUESTRADOR DA ANIMAÇÃO ---
- IEnumerator GenerationSequence()
+    IEnumerator GenerationSequence()
     {
-        if(mainCamera != null )PositionAerialCamera();
+        if (mainCamera != null) PositionAerialCamera();
 
-        // 1. INÍCIO DO CRONÔMETRO DE PERFORMANCE
+        // Inicializa o ChunkManager ANTES de registrar qualquer objeto,
+        // para que o spacing correto seja usado no WorldToChunk durante o registro.
+        if (chunkManager != null)
+            chunkManager.Initialize(spacing);
+
         Stopwatch timer = new Stopwatch();
         timer.Start();
 
-        GenerateMazeData(); // Gera a matemática
-        DrawFloors();       // Desenha o piso instantaneamente
+        GenerateMazeData();
+        DrawFloors();
 
         timer.Stop();
         UnityEngine.Debug.Log($"[Performance] Tempo para gerar matriz ({Width}x{Height}) e instanciar pisos: {timer.ElapsedMilliseconds} ms");
 
-        yield return new WaitForSeconds(0.5f); 
+        yield return new WaitForSeconds(0.5f);
 
         yield return StartCoroutine(DrawWallsAnimated());
 
-        enemyNavmeshSurface.BuildNavMesh();
+        UnityEngine.Debug.Log($"[Performance] Total de objetos registrados nos chunks: {chunkManager?.GetTotalRegisteredObjects()}");
 
-        if (mainCamera != null)SpawnRandomObjects();
-        if(mainCamera != null)yield return StartCoroutine(SpawnPlayerAndTransition());
+        // Ativa todos os objetos para o NavMesh bake (são todos inativos após o registro)
+        chunkManager?.ShowAll();
+        enemyNavmeshSurface.BuildNavMesh();
+        // O SetPlayer (chamado em SpawnPlayerAndTransition) vai restaurar a visibilidade por chunk
+
+        if (mainCamera != null) SpawnRandomObjects();
+        if (mainCamera != null) yield return StartCoroutine(SpawnPlayerAndTransition());
     }
 
     void PositionAerialCamera()
     {
         if (mainCamera == null) mainCamera = Camera.main;
 
-        // Calcula o centro do labirinto
         float centerX = (Width * spacing) / 2f;
         float centerZ = (Height * spacing) / 2f;
-        
-        // Define uma altura baseada no tamanho do labirinto para caber tudo na tela
         float altura = Mathf.Max(Width, Height) * spacing * 0.8f;
 
         mainCamera.transform.position = new Vector3(centerX, altura, centerZ);
-        mainCamera.transform.rotation = Quaternion.Euler(90, 0, 0); // Olha direto para baixo
+        mainCamera.transform.rotation = Quaternion.Euler(90, 0, 0);
 
         mapCamera.transform.position = new Vector3(centerX, altura + 10f, centerZ);
-        mapCamera.transform.rotation = Quaternion.Euler(90, 0, 0); // Olha direto para baixo
+        mapCamera.transform.rotation = Quaternion.Euler(90, 0, 0);
     }
 
-    // --- LÓGICA DE GERAÇÃO (Separada do desenho) ---
     public void GenerateMazeData()
     {
         if (Seed == 0)
@@ -118,7 +124,7 @@ public class MazeGenerator : MonoBehaviour
         }
         System.Random rng = new System.Random(Seed);
         grid = new MazeCell[Width, Height];
-        generationOrder = new List<MazeCell>(); 
+        generationOrder = new List<MazeCell>();
 
         for (int x = 0; x < Width; x++)
             for (int z = 0; z < Height; z++)
@@ -126,11 +132,11 @@ public class MazeGenerator : MonoBehaviour
 
         Stack<MazeCell> stack = new Stack<MazeCell>();
         MazeCell current = grid[0, 0];
-        
+
         current.IsVisited = true;
-        generationOrder.Add(current); 
-        
-        current.MyWallThickness = spacing * wallThicknessRatio; 
+        generationOrder.Add(current);
+
+        current.MyWallThickness = spacing * wallThicknessRatio;
         current.MyWallHeight = spacing * wallHeightRatio;
 
         stack.Push(current);
@@ -144,11 +150,11 @@ public class MazeGenerator : MonoBehaviour
             {
                 MazeCell neighbor = neighbors[rng.Next(neighbors.Count)];
                 RemoveWalls(current, neighbor);
-                
-                neighbor.IsVisited = true;
-                generationOrder.Add(neighbor); 
 
-                neighbor.MyWallThickness = current.MyWallThickness; 
+                neighbor.IsVisited = true;
+                generationOrder.Add(neighbor);
+
+                neighbor.MyWallThickness = current.MyWallThickness;
                 neighbor.MyWallHeight = current.MyWallHeight;
 
                 stack.Push(neighbor);
@@ -158,10 +164,11 @@ public class MazeGenerator : MonoBehaviour
                 stack.Pop();
             }
         }
+
         int becosAntes = CountDeadEnds();
         RemoveDeadEnds();
         int becosDepois = CountDeadEnds();
-        
+
         UnityEngine.Debug.Log($"[Design] Becos sem saída ANTES do Braiding: {becosAntes}");
         UnityEngine.Debug.Log($"[Design] Becos sem saída DEPOIS do Braiding (Taxa {BraidingRate}%): {becosDepois}");
         UnityEngine.Debug.Log($"[Design] Total de becos removidos: {becosAntes - becosDepois}");
@@ -176,69 +183,87 @@ public class MazeGenerator : MonoBehaviour
                 Vector3 position = new Vector3(x * spacing, 0, z * spacing);
                 GameObject floor = Instantiate(FloorPrefab, position, Quaternion.identity, transform);
                 floor.transform.localScale = new Vector3(spacing, 1, spacing);
+
+                // ✅ NOVO: Registra o piso no chunk correspondente
+                chunkManager?.RegisterObject(floor, position);
             }
         }
     }
 
-    // --- DESENHO DAS PAREDES (Animado) ---
     IEnumerator DrawWallsAnimated()
     {
         int count = 0;
 
-        // AQUI MUDOU: Usamos o foreach na lista de histórico em vez dos loops x/z
         foreach (MazeCell cell in generationOrder)
         {
             Vector3 position = new Vector3(cell.X * spacing, 0, cell.Z * spacing);
             float offset = spacing / 2f;
             float length = spacing;
 
-            // 1. SEMPRE desenha Topo e Direita se existirem
-            if (cell.WallTop) BuildWall(position + new Vector3(0, 0, offset), Vector3.zero, length, cell.MyWallThickness, cell.MyWallHeight);
-            if (cell.WallRight) BuildWall(position + new Vector3(offset, 0, 0), new Vector3(0, 90, 0), length, cell.MyWallThickness, cell.MyWallHeight);
+            if (cell.WallTop)
+            {
+                Vector3 wallPos = position + new Vector3(0, 0, offset);
+                // ✅ NOVO: BuildWall agora retorna o objeto e registramos no chunk
+                GameObject wall = BuildWall(wallPos, Vector3.zero, length, cell.MyWallThickness, cell.MyWallHeight);
+                chunkManager?.RegisterObject(wall, wallPos);
+            }
 
-            // 2. SÓ desenha Baixo e Esquerda se for a Borda do Labirinto
-            // Isso evita duplicar paredes com os vizinhos
+            if (cell.WallRight)
+            {
+                Vector3 wallPos = position + new Vector3(offset, 0, 0);
+                GameObject wall = BuildWall(wallPos, new Vector3(0, 90, 0), length, cell.MyWallThickness, cell.MyWallHeight);
+                chunkManager?.RegisterObject(wall, wallPos);
+            }
+
             if (cell.Z == 0 && cell.WallBottom)
-                BuildWall(position + new Vector3(0, 0, -offset), Vector3.zero, length, cell.MyWallThickness, cell.MyWallHeight);
+            {
+                Vector3 wallPos = position + new Vector3(0, 0, -offset);
+                GameObject wall = BuildWall(wallPos, Vector3.zero, length, cell.MyWallThickness, cell.MyWallHeight);
+                chunkManager?.RegisterObject(wall, wallPos);
+            }
 
             if (cell.X == 0 && cell.WallLeft)
-                BuildWall(position + new Vector3(-offset, 0, 0), new Vector3(0, 90, 0), length, cell.MyWallThickness, cell.MyWallHeight);
+            {
+                Vector3 wallPos = position + new Vector3(-offset, 0, 0);
+                GameObject wall = BuildWall(wallPos, new Vector3(0, 90, 0), length, cell.MyWallThickness, cell.MyWallHeight);
+                chunkManager?.RegisterObject(wall, wallPos);
+            }
 
-            // Controle de fluxo da animação
             count++;
             if (count >= wallPerFrame)
             {
                 count = 0;
-                yield return null; 
+                yield return null;
             }
         }
     }
 
+    // ✅ ATENÇÃO: BuildWall agora retorna o GameObject (antes era void)
+    // Essa é a ÚNICA mudança na assinatura do método
     GameObject BuildWall(Vector3 pos, Vector3 rot, float length, float thickness, float height)
     {
         GameObject wall = Instantiate(WallPrefab, pos, Quaternion.Euler(rot), transform);
         wall.transform.localScale = new Vector3(length, height, thickness);
-        wall.transform.position += new Vector3(0, -1, 0); // Ajuste do pivô
-        return wall;
+        wall.transform.position += new Vector3(0, -1, 0);
+        return wall; // ✅ NOVO: retorna o objeto para podermos registrar no chunk
     }
 
-    // --- SPAWN E TRANSIÇÃO ---
     IEnumerator SpawnPlayerAndTransition()
     {
-        // 1. Spawna o Player
         Vector3 startPos = new Vector3(0, 2f, 0);
         GameObject player = Instantiate(PlayerPrefab, startPos, Quaternion.identity);
         player.GetComponent<FirstPersonController>().mapaUIPlayer = mapUI;
 
-        // 2. Tenta achar a câmera dentro do Player (caso seja um prefab FPS padrão)
-        // Se não achar, usa o próprio transform do player
+        // ✅ NOVO: Informa o ChunkManager sobre o Transform do player
+        // A partir disso, o Update() do ChunkManager começa a controlar a visibilidade
+        if (chunkManager != null)
+        {
+            chunkManager.SetPlayer(player.transform);
+        }
+
         Transform cameraTarget = player.transform.GetComponentInChildren<Camera>()?.transform;
         if (cameraTarget == null) cameraTarget = player.transform;
 
-        // Desativa o controle do player durante a transição (opcional, depende do seu script de player)
-        // player.GetComponent<PlayerController>().enabled = false; 
-
-        // 3. Animação da Câmera
         Vector3 startCamPos = mainCamera.transform.position;
         Quaternion startCamRot = mainCamera.transform.rotation;
         float elapsed = 0;
@@ -247,9 +272,7 @@ public class MazeGenerator : MonoBehaviour
         {
             elapsed += Time.deltaTime;
             float t = elapsed / cameraFlyingTime;
-            
-            // Suavização (SmoothStep)
-            t = t * t * (3f - 2f * t); 
+            t = t * t * (3f - 2f * t);
 
             mainCamera.transform.position = Vector3.Lerp(startCamPos, cameraTarget.position, t);
             mainCamera.transform.rotation = Quaternion.Slerp(startCamRot, cameraTarget.rotation, t);
@@ -262,7 +285,6 @@ public class MazeGenerator : MonoBehaviour
         run.gameObject.SetActive(true);
     }
 
-    // --- FUNÇÕES AUXILIARES MANTIDAS (Lógica do labirinto) ---
     List<MazeCell> GetUnvisitedNeighbors(MazeCell cell)
     {
         List<MazeCell> neighbors = new List<MazeCell>();
@@ -304,51 +326,40 @@ public class MazeGenerator : MonoBehaviour
 
     void SpawnRandomObjects()
     {
-        if (ObjectsToSpawn.Count == 0|| ObjectsToSpawn == null) return;
-        
-        System.Random rng = new System.Random(Seed); // Usando a mesma Seed para consistência
-        List<string> usedPositions = new List<string>(); // Para evitar 2 objetos no mesmo lugar
-        GameObject objectToSpawn; int numberOfObjects;
-        float objectHeight;
+        if (ObjectsToSpawn.Count == 0 || ObjectsToSpawn == null) return;
+
+        System.Random rng = new System.Random(Seed);
+        List<string> usedPositions = new List<string>();
 
         for (int i = 0; i < ObjectsToSpawn.Count; i++)
         {
-            objectToSpawn = ObjectsToSpawn[i].ObjectToSpawn;
-            numberOfObjects = ObjectsToSpawn[i].Quantity;
-            objectHeight = ObjectsToSpawn[i].ObjectHight;
-
+            GameObject objectToSpawn = ObjectsToSpawn[i].ObjectToSpawn;
+            int numberOfObjects = ObjectsToSpawn[i].Quantity;
+            float objectHeight = ObjectsToSpawn[i].ObjectHight;
             int spawnedCount = 0;
-
 
             while (spawnedCount < numberOfObjects)
             {
-                // Escolhe uma célula aleatória
                 int rX = rng.Next(0, Width);
                 int rZ = rng.Next(0, Height);
 
-                // Regra: Não spawnar na posição inicial do Player (0,0)
                 if (rX == 0 && rZ == 0) continue;
 
-                // Regra: Não spawnar onde já tem objeto
                 string posKey = $"{rX},{rZ}";
                 if (usedPositions.Contains(posKey)) continue;
 
-                // Calcula a posição no mundo real
-                // Multiplicamos pelo spacing para centralizar no corredor
                 Vector3 worldPosition = new Vector3(rX * spacing, objectHeight, rZ * spacing);
+                GameObject spawned = Instantiate(objectToSpawn, worldPosition, Quaternion.identity, transform);
 
-                Instantiate(objectToSpawn, worldPosition, Quaternion.identity, transform);
+                // ✅ NOVO: Registra objetos spawnados (grama, itens, etc.) no chunk também
+                chunkManager?.RegisterObject(spawned, worldPosition);
 
                 usedPositions.Add(posKey);
                 spawnedCount++;
             }
-
         }
-
-            
-            
     }
-    
+
     private int CountDeadEnds()
     {
         int deadEndCount = 0;
@@ -363,11 +374,7 @@ public class MazeGenerator : MonoBehaviour
                 if (cell.WallRight) wallCount++;
                 if (cell.WallLeft) wallCount++;
 
-                // Se uma célula tem 3 paredes, é um beco sem saída
-                if (wallCount == 3)
-                {
-                    deadEndCount++;
-                }
+                if (wallCount == 3) deadEndCount++;
             }
         }
         return deadEndCount;

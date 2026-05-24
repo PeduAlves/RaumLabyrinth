@@ -1,0 +1,12 @@
+# Blender 5.1.2 MTL File: 'golemPlaceHolderRig.blend'
+# www.blender.org
+
+newmtl golem_PlaceHolder
+Ns 0.000000
+Ka 1.000000 1.000000 1.000000
+Ks 1.000000 1.000000 1.000000
+Ke 1.000000 1.000000 1.000000
+Ni 1.500000
+d 1.000000
+illum 3
+map_Kd C:/golem_PlaceHolder_BaseColor_Utility - sRGB - Texture.1001.png

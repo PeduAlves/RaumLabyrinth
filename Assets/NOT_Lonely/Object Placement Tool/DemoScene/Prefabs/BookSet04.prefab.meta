@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 5039f888dbad8c54bbd959f7d3438df3
+timeCreated: 1570071291
+licenseType: Store
+NativeFormatImporter:
+  mainObjectFileID: 100100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 99591
+  packageName: Object Placement Tool
+  packageVersion: 1.2
+  assetPath: Assets/NOT_Lonely/Object Placement Tool/DemoScene/Prefabs/BookSet04.prefab
+  uploadId: 559380

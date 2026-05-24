@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 127c59cbb97fa1c488ca292c063ab721
+timeCreated: 1570071289
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 99591
+  packageName: Object Placement Tool
+  packageVersion: 1.2
+  assetPath: Assets/NOT_Lonely/Object Placement Tool/Editor/NL_ObjectPlacementTool_window.cs
+  uploadId: 559380

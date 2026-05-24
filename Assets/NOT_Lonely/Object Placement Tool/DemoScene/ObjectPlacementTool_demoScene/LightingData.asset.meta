@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: d5913a47bb88d1b469a03184d33b40cc
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 112000000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 99591
+  packageName: Object Placement Tool
+  packageVersion: 1.2
+  assetPath: Assets/NOT_Lonely/Object Placement Tool/DemoScene/ObjectPlacementTool_demoScene/LightingData.asset
+  uploadId: 559380
