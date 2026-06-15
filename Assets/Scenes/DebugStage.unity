@@ -127,6 +127,18 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 604123822865620645, guid: 32bd3fb7214ed9701b7f4f63546d9179, type: 3}
+      propertyPath: m_Layer
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 960325859257826389, guid: 32bd3fb7214ed9701b7f4f63546d9179, type: 3}
+      propertyPath: m_Layer
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 1258132719733871455, guid: 32bd3fb7214ed9701b7f4f63546d9179, type: 3}
+      propertyPath: m_Layer
+      value: 3
+      objectReference: {fileID: 0}
     - target: {fileID: 2359249061819118629, guid: 32bd3fb7214ed9701b7f4f63546d9179, type: 3}
       propertyPath: maxHealth
       value: 2
@@ -137,15 +149,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2799091571545941628, guid: 32bd3fb7214ed9701b7f4f63546d9179, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -2.25
+      value: -2.1
       objectReference: {fileID: 0}
     - target: {fileID: 2799091571545941628, guid: 32bd3fb7214ed9701b7f4f63546d9179, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.87
+      value: 5.33
       objectReference: {fileID: 0}
     - target: {fileID: 2799091571545941628, guid: 32bd3fb7214ed9701b7f4f63546d9179, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -10.24852
+      value: 33.73
       objectReference: {fileID: 0}
     - target: {fileID: 2799091571545941628, guid: 32bd3fb7214ed9701b7f4f63546d9179, type: 3}
       propertyPath: m_LocalRotation.w
@@ -183,7 +195,31 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 3
       objectReference: {fileID: 0}
+    - target: {fileID: 3954820322364318823, guid: 32bd3fb7214ed9701b7f4f63546d9179, type: 3}
+      propertyPath: m_Layer
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 4021197431073070227, guid: 32bd3fb7214ed9701b7f4f63546d9179, type: 3}
+      propertyPath: m_Layer
+      value: 3
+      objectReference: {fileID: 0}
     - target: {fileID: 4580584738598823182, guid: 32bd3fb7214ed9701b7f4f63546d9179, type: 3}
+      propertyPath: m_Layer
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 5272845013487591889, guid: 32bd3fb7214ed9701b7f4f63546d9179, type: 3}
+      propertyPath: m_Layer
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 6173717307535651365, guid: 32bd3fb7214ed9701b7f4f63546d9179, type: 3}
+      propertyPath: m_Layer
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 7015699931343369349, guid: 32bd3fb7214ed9701b7f4f63546d9179, type: 3}
+      propertyPath: m_Layer
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 7106339095588898585, guid: 32bd3fb7214ed9701b7f4f63546d9179, type: 3}
       propertyPath: m_Layer
       value: 3
       objectReference: {fileID: 0}
@@ -192,6 +228,26 @@ PrefabInstance:
       value: Player
       objectReference: {fileID: 0}
     - target: {fileID: 8045391640182931350, guid: 32bd3fb7214ed9701b7f4f63546d9179, type: 3}
+      propertyPath: m_Layer
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 8253043726086581943, guid: 32bd3fb7214ed9701b7f4f63546d9179, type: 3}
+      propertyPath: m_Layer
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 8372263886402964097, guid: 32bd3fb7214ed9701b7f4f63546d9179, type: 3}
+      propertyPath: m_Layer
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 8549841688435982947, guid: 32bd3fb7214ed9701b7f4f63546d9179, type: 3}
+      propertyPath: m_Layer
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 8975183866181506621, guid: 32bd3fb7214ed9701b7f4f63546d9179, type: 3}
+      propertyPath: m_Layer
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 9062030647471237918, guid: 32bd3fb7214ed9701b7f4f63546d9179, type: 3}
       propertyPath: m_Layer
       value: 3
       objectReference: {fileID: 0}
@@ -728,7 +784,7 @@ MonoBehaviour:
   m_Center: {x: 0, y: 2, z: 0}
   m_LayerMask:
     serializedVersion: 2
-    m_Bits: 759
+    m_Bits: 758
   m_UseGeometry: 0
   m_DefaultArea: 0
   m_GenerateLinks: 0
@@ -1004,14 +1060,6 @@ PrefabInstance:
     - target: {fileID: 4399481542174062158, guid: 1aa263177ae9623449fac917d57461c2, type: 3}
       propertyPath: m_Name
       value: GolemV5Animated
-      objectReference: {fileID: 0}
-    - target: {fileID: 8478061523221724153, guid: 1aa263177ae9623449fac917d57461c2, type: 3}
-      propertyPath: attackRange
-      value: 8
-      objectReference: {fileID: 0}
-    - target: {fileID: 8478061523221724153, guid: 1aa263177ae9623449fac917d57461c2, type: 3}
-      propertyPath: perceptionDistance
-      value: 5
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

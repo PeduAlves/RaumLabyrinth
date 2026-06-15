@@ -34,12 +34,11 @@ public class Enemy : MonoBehaviour
     [SerializeField] private EnemyStates currentState;
     [SerializeField] private bool isSearching = false;
     [SerializeField] private bool isHeadBroken = false;
-    [SerializeField] private bool isMoving = false;
     [SerializeField] private bool isAirborne = true;
 
     private bool isPlayerInSight = false;
     private Vector3 lastTargetPosition;
-    private float searchTimer = 0f;
+    [SerializeField] private float searchTimer = 0f;
 
     void Start()
     {
@@ -68,7 +67,7 @@ public class Enemy : MonoBehaviour
             if (searchTimer <= 0f) isSearching = false;
         }
 
-        if (isMoving && !agent.pathPending && agent.remainingDistance <= 0.1f)
+        if (!agent.pathPending && agent.remainingDistance <= 0.1f)
         {
             ResetAi();
         }
@@ -102,7 +101,6 @@ public class Enemy : MonoBehaviour
     {
         SetCondition(EnemyConditions.Broken, true);
         agent.enabled = false;
-        isMoving = false;
     }
 
     public void EnableAi() => SetCondition(EnemyConditions.Broken, false);
@@ -110,20 +108,17 @@ public class Enemy : MonoBehaviour
     public void FinishEnableAi()
     {
         agent.enabled = true;
-        Patrol(spawnLocation);
     }
         
 
     public void ResetAi()
     {
-        isMoving = false;
         ChangeStates(EnemyStates.Looking, true);
     }
 
     // --- MOVEMENT ---
     void GoToLocation(Vector3 location)
     {
-        isMoving = true;
         ChangeStates(EnemyStates.Walking);
         agent.isStopped = false;
         agent.SetDestination(new Vector3(location.x, transform.position.y, location.z));
@@ -248,7 +243,6 @@ public class Enemy : MonoBehaviour
     {
         if (bodyParts[EnemyDamagablePart.RightArm].isDisabled && bodyParts[EnemyDamagablePart.LeftArm].isDisabled) return;
 
-        isMoving = false;
         agent.isStopped = true;
         ChangeStates(EnemyStates.Attacking);
 
