@@ -1356,7 +1356,7 @@ MonoBehaviour:
   m_Center: {x: 0, y: 2, z: 0}
   m_LayerMask:
     serializedVersion: 2
-    m_Bits: 759
+    m_Bits: 758
   m_UseGeometry: 0
   m_DefaultArea: 0
   m_GenerateLinks: 0
@@ -1888,7 +1888,7 @@ PrefabInstance:
     - target: {fileID: 3203574012870503850, guid: 087016808b63c259593db58b13afa54a, type: 3}
       propertyPath: ObjectsToSpawn.Array.data[1].ObjectToSpawn
       value: 
-      objectReference: {fileID: 617005730308217624, guid: bfa4760ddc1db694f9b328f7ef81499c, type: 3}
+      objectReference: {fileID: 4399481542174062158, guid: 1aa263177ae9623449fac917d57461c2, type: 3}
     - target: {fileID: 6367474873025907011, guid: 087016808b63c259593db58b13afa54a, type: 3}
       propertyPath: m_LocalPosition.x
       value: -0
