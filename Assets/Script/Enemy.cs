@@ -18,6 +18,14 @@ public class Enemy : MonoBehaviour
     [SerializeField] private float maxSearchTime = 30f;
 
     [Header("Movement Settings")]
+    [SerializeField] private float walkSpeed = 1.5f;
+    [SerializeField] private float chaseSpeedMultiplier = 5f;
+    [SerializeField] private float crippleSpeedMultiplier = 0.5f;
+    [SerializeField] private float runningSpeedMultiplier = 1.5f;
+    [SerializeField] private float chaseAngularSpeed = 100;
+    [SerializeField] private float angularSpeedWalkMultiplier = 0.5f;
+    [SerializeField] private float angularSpeedRunningMultiplier = 2f;
+    private float runningSpeed;
     [SerializeField] private float patrolRadius = 7f;
     [Range(0f, 1f)][SerializeField] private float minPatrolRadiusPercentage = 0.5f;
     [SerializeField] private LayerMask groundLayer;
@@ -40,12 +48,20 @@ public class Enemy : MonoBehaviour
     private Vector3 lastTargetPosition;
     [SerializeField] private float searchTimer = 0f;
 
-    void Start()
+    private void Awake()
     {
         animator = GetComponent<Animator>();
         agent = GetComponent<NavMeshAgent>();
         visionRange = GetComponent<SphereCollider>();
 
+        runningSpeed = walkSpeed * runningSpeedMultiplier * chaseSpeedMultiplier;
+        agent.speed = walkSpeed * chaseSpeedMultiplier;
+        agent.angularSpeed = chaseAngularSpeed;
+        // animator.speed = 1 / chaseSpeedMultiplier;
+    }
+
+    void Start()
+    {
         minPatrolRadius = patrolRadius * minPatrolRadiusPercentage;
         spawnLocation = lastTargetPosition = transform.position;
 
@@ -67,9 +83,10 @@ public class Enemy : MonoBehaviour
             if (searchTimer <= 0f) isSearching = false;
         }
 
-        if (!agent.pathPending && agent.remainingDistance <= 0.1f)
+        if (!agent.pathPending && agent.remainingDistance <= 0.1f && currentState.IsMovingState())
         {
-            ResetAi();
+            FinishLooking();
+            //ResetAi();
         }
     }
 
@@ -79,8 +96,49 @@ public class Enemy : MonoBehaviour
         if (currentState == newState || IsBroken()) return;
         if (!force && currentState.GetStatePriority() > newState.GetStatePriority()) return;
 
+        if (currentState == EnemyStates.Running)
+        {
+            animator.SetBool(currentState.GetAnimationStateBooleanName(), false);
+        }
+
         currentState = newState;
         animator.SetTrigger(newState.GetAnimationTrigger());
+
+        ApplyStatePhysics(currentState);
+    }
+
+    void ApplyStatePhysics(EnemyStates state) {
+
+        float baseSpeed = walkSpeed;
+        float baseAngular = chaseAngularSpeed;
+        animator.speed = 1f;
+
+        switch (currentState)
+        {
+            case EnemyStates.Walking:
+                baseSpeed = walkSpeed;
+                baseAngular = chaseAngularSpeed * angularSpeedWalkMultiplier;
+                animator.speed = 1/chaseSpeedMultiplier;
+                break;
+            case EnemyStates.Chasing:
+                baseSpeed = walkSpeed * chaseSpeedMultiplier;
+                baseAngular = chaseAngularSpeed;
+                break;
+            case EnemyStates.Running:
+                baseSpeed = runningSpeed;
+                baseAngular = chaseAngularSpeed * angularSpeedRunningMultiplier;
+                animator.SetBool(currentState.GetAnimationStateBooleanName(), true);
+                break;
+        }
+
+        float damageModifier = 1f;
+        if (GetCondition(EnemyConditions.BrokeLeftLeg)) damageModifier *= crippleSpeedMultiplier;
+        if (GetCondition(EnemyConditions.BrokeRightLeg)) damageModifier *= crippleSpeedMultiplier;
+        if (GetCondition(EnemyConditions.BrokeLeftArm)) damageModifier *= crippleSpeedMultiplier;
+        if (GetCondition(EnemyConditions.BrokeRightArm)) damageModifier *= crippleSpeedMultiplier;
+
+        agent.speed = baseSpeed * damageModifier;
+        agent.angularSpeed = baseAngular;
     }
 
     void SetCondition(EnemyConditions condition, bool value) => animator.SetBool(condition.GetAnimatorConditionName(), value);
@@ -94,6 +152,13 @@ public class Enemy : MonoBehaviour
         bool bothLegs = GetCondition(EnemyConditions.BrokeLeftLeg) && GetCondition(EnemyConditions.BrokeRightLeg);
 
         return bothLegs || (anyArm && anyLeg) || isHeadBroken;
+    }
+    private bool HasAllLimbs()
+    {
+        return !GetCondition(EnemyConditions.BrokeLeftArm) &&
+               !GetCondition(EnemyConditions.BrokeRightArm) &&
+               !GetCondition(EnemyConditions.BrokeLeftLeg) &&
+               !GetCondition(EnemyConditions.BrokeRightLeg);
     }
 
     // --- AI CONTROLLERS ---
@@ -117,20 +182,37 @@ public class Enemy : MonoBehaviour
     }
 
     // --- MOVEMENT ---
-    void GoToLocation(Vector3 location)
+    void GoToLocation(Vector3 location, EnemyStates moveState = EnemyStates.Walking)
     {
-        ChangeStates(EnemyStates.Walking);
+        ChangeStates(moveState);
         agent.isStopped = false;
         agent.SetDestination(new Vector3(location.x, transform.position.y, location.z));
     }
 
-    void Patrol(Vector3 areaCenter)
+    void Patrol(Vector3 areaCenter)// ToDo: código gerado, examinar depois
     {
-        Vector2 randomDir = Random.insideUnitCircle.normalized;
-        float randomDist = Random.Range(minPatrolRadius, patrolRadius);
-        Vector3 point = new Vector3(randomDir.x * randomDist, 0, randomDir.y * randomDist);
+        Vector3 finalPoint = transform.position;
+        float minDistanceSqr = minPatrolRadius * minPatrolRadius; // Evita usar Vector3.Distance (que usa raiz quadrada)
+        int maxAttempts = 5; // Limite para evitar loops infinitos
 
-        GoToLocation(areaCenter + point);
+        for (int i = 0; i < maxAttempts; i++)
+        {
+            Vector2 randomDir = Random.insideUnitCircle.normalized;
+            float randomDist = Random.Range(minPatrolRadius, patrolRadius);
+            Vector3 candidatePoint = areaCenter + new Vector3(randomDir.x * randomDist, 0, randomDir.y * randomDist);
+
+            // Compara a distância ao quadrado entre a posição atual e o ponto candidato
+            if ((candidatePoint - transform.position).sqrMagnitude >= minDistanceSqr)
+            {
+                finalPoint = candidatePoint;
+                break;
+            }
+
+            // Se estourar as tentativas, usa o último gerado como fallback para não travar a IA
+            finalPoint = candidatePoint;
+        }
+
+        GoToLocation(finalPoint);
     }
 
     public void FinishLooking() => Patrol(isSearching ? lastTargetPosition : spawnLocation);
@@ -213,7 +295,23 @@ public class Enemy : MonoBehaviour
     }
 
     // --- COMBAT & DAMAGE ---
+
     internal void TakeDamage(EnemyDamagablePart part)
+    {
+        if (HasAllLimbs())
+        {
+            GameObject player = GameObject.FindGameObjectWithTag("Player");
+            if (player != null)
+            {
+                lastTargetPosition = player.transform.position;
+                isPlayerInSight = true;
+                GoToLocation(lastTargetPosition, EnemyStates.Running);
+                return;
+            }
+        }
+    }
+
+    internal void DestroyPart(EnemyDamagablePart part)
     {
         if (part == EnemyDamagablePart.Head) isHeadBroken = true;
         else if (part != EnemyDamagablePart.Torso)
@@ -224,6 +322,8 @@ public class Enemy : MonoBehaviour
         }
 
         if (CheckIfPartBroken()) DisableAi();
+
+        ApplyStatePhysics(currentState);
     }
 
     internal void Heal(EnemyDamagablePart part)
@@ -263,7 +363,14 @@ public class Enemy : MonoBehaviour
 
     void EndAttack()
     {
-        ResetAi();
-        rightFistCollider.enabled = leftFistCollider.enabled = false;
+        rightFistCollider.enabled = leftFistCollider.enabled = false; if (isPlayerInSight)
+        {
+            ChangeStates(EnemyStates.Chasing, true);
+            agent.isStopped = false;
+        }
+        else
+        {
+            ResetAi();
+        }
     }
 }

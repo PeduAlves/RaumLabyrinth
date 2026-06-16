@@ -60,17 +60,40 @@ public enum EnemyStates
 {
     Looking,
     Walking,
+    Chasing,
+    Running,
     Attacking,
 }
 
 public static class EnemyStatesExtensions
 {
+    
+    public static bool IsMovingState(this EnemyStates state)
+    {
+        return state switch
+        {
+            EnemyStates.Walking => true,
+            EnemyStates.Chasing => true,
+            EnemyStates.Running => true,
+            _ => false
+        };
+    }
+    public static string GetAnimationStateBooleanName(this EnemyStates state)
+    {
+        return state switch
+        {
+            EnemyStates.Running => "Running",
+            _ => throw new System.ArgumentOutOfRangeException(nameof(state), state, null)
+        };
+    }
     public static string GetAnimationTrigger(this EnemyStates state)
     {
         return state switch
         {
             EnemyStates.Looking => "Look",
-            EnemyStates.Walking => "Walk",
+            EnemyStates.Walking => "Move",
+            EnemyStates.Chasing => "Move",
+            EnemyStates.Running => "Move",
             EnemyStates.Attacking => "Attack",
             _ => throw new System.ArgumentOutOfRangeException(nameof(state), state, null)
         };
@@ -82,7 +105,9 @@ public static class EnemyStatesExtensions
         {
             EnemyStates.Looking => 0,
             EnemyStates.Walking => 1,
-            EnemyStates.Attacking => 2,
+            EnemyStates.Chasing => 2,
+            EnemyStates.Running => 3,
+            EnemyStates.Attacking => 4,
             _ => throw new System.ArgumentOutOfRangeException(nameof(state), state, null)
         };
     }

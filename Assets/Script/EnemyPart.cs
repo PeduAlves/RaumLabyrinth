@@ -24,8 +24,9 @@ public class EnemyPart : MonoBehaviour, Damagable
             health = 0;
             mesh.enabled = false;
             isDisabled = true;
-            mainBody.TakeDamage(partType);
+            mainBody.DestroyPart(partType);
         }
+        mainBody.TakeDamage(partType);
         
     }
 
