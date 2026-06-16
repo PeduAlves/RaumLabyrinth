@@ -107,6 +107,15 @@ public class Enemy : MonoBehaviour
             animator.SetBool(currentState.GetAnimationStateBooleanName(), false);
         }
 
+        if (newState.IsMovingState())
+        {
+            agent.enabled = true;
+        }
+        else
+        {
+            agent.enabled = false;
+        }
+
         currentState = newState;
         animator.SetTrigger(newState.GetAnimationTrigger());
 
@@ -178,7 +187,7 @@ public class Enemy : MonoBehaviour
 
     public void FinishEnableAi()
     {
-        agent.enabled = true;
+        ResetAi();
     }
         
 
@@ -222,6 +231,11 @@ public class Enemy : MonoBehaviour
     }
 
     public void FinishLooking() => Patrol(isSearching ? lastTargetPosition : spawnLocation);
+
+    public void FinishTripping()
+    {
+        if (!CheckIfPartBroken()) EnableAi();
+    }
 
     // --- PERCEPTION & COLLISIONS ---
     private void OnCollisionEnter(Collision collision)
@@ -304,15 +318,17 @@ public class Enemy : MonoBehaviour
 
     internal void TakeDamage(EnemyDamagablePart part)
     {
-        if (HasAllLimbs())
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        lastTargetPosition = player.transform.position;
+        isPlayerInSight = true;
+        if (player != null)
         {
-            GameObject player = GameObject.FindGameObjectWithTag("Player");
-            if (player != null)
+            if (HasAllLimbs())
             {
-                lastTargetPosition = player.transform.position;
-                isPlayerInSight = true;
                 GoToLocation(lastTargetPosition, EnemyStates.Running);
-                return;
+            } else
+            {
+                GoToLocation(lastTargetPosition, EnemyStates.Chasing);
             }
         }
     }
@@ -326,8 +342,7 @@ public class Enemy : MonoBehaviour
             agent.speed *= 0.5f;
             SetCondition(part.GetContionOfPartDamage(), true);
         }
-
-        if (CheckIfPartBroken()) DisableAi();
+        if (CheckIfPartBroken() || currentState == EnemyStates.Running) DisableAi();
 
         ApplyStatePhysics(currentState);
     }

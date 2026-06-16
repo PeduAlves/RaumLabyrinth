@@ -5312,7 +5312,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 68d93d74f208f7344a9f72aad1548e8a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  visionAngle: 80
+  visionAngle: 120
   perceptionDistance: 5
   obstacleLayer:
     serializedVersion: 2
@@ -5321,20 +5321,28 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 8
   maxSearchTime: 30
+  walkSpeed: 1.5
+  chaseSpeedMultiplier: 5
+  crippleSpeedMultiplier: 0.5
+  runningSpeedMultiplier: 1.5
+  chaseAngularSpeed: 250
+  angularSpeedWalkMultiplier: 0.5
+  angularSpeedRunningMultiplier: 2
   patrolRadius: 5
-  minPatrolRadiusPercentage: 0.5
+  minPatrolRadiusPercentage: 0.702
   groundLayer:
     serializedVersion: 2
     m_Bits: 512
   rightFistCollider: {fileID: 6132209381864633436}
   leftFistCollider: {fileID: 6412128629644079210}
-  attackRange: 8
+  attackRange: 5
+  attackCooldown: 1
   shokwavePrefab: {fileID: 7234906882633991131, guid: 4ca40fc0f24d38b429d64348dfbfaa6c, type: 3}
   currentState: 0
   isSearching: 0
   isHeadBroken: 0
-  isMoving: 0
   isAirborne: 1
+  searchTimer: 0
 --- !u!1 &4503133011350944826
 GameObject:
   m_ObjectHideFlags: 0

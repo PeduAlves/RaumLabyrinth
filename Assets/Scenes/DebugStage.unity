@@ -1457,6 +1457,10 @@ PrefabInstance:
       value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 2359249061819118629, guid: 32bd3fb7214ed9701b7f4f63546d9179, type: 3}
+      propertyPath: maxHealth
+      value: 20
+      objectReference: {fileID: 0}
+    - target: {fileID: 2359249061819118629, guid: 32bd3fb7214ed9701b7f4f63546d9179, type: 3}
       propertyPath: equipedWeapom
       value: 
       objectReference: {fileID: 0}
@@ -15380,25 +15384,9 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 3571111338040491246, guid: 1aa263177ae9623449fac917d57461c2, type: 3}
-      propertyPath: m_UpdateMode
-      value: 0
-      objectReference: {fileID: 0}
     - target: {fileID: 4399481542174062158, guid: 1aa263177ae9623449fac917d57461c2, type: 3}
       propertyPath: m_Name
       value: GolemV5Animated
-      objectReference: {fileID: 0}
-    - target: {fileID: 5633360944847580906, guid: 1aa263177ae9623449fac917d57461c2, type: 3}
-      propertyPath: m_Speed
-      value: 7.5
-      objectReference: {fileID: 0}
-    - target: {fileID: 8478061523221724153, guid: 1aa263177ae9623449fac917d57461c2, type: 3}
-      propertyPath: chaseAngularSpeed
-      value: 250
-      objectReference: {fileID: 0}
-    - target: {fileID: 8478061523221724153, guid: 1aa263177ae9623449fac917d57461c2, type: 3}
-      propertyPath: minPatrolRadiusPercentage
-      value: 0.702
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
