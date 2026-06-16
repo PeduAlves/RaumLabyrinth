@@ -1457,10 +1457,6 @@ PrefabInstance:
       value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 2359249061819118629, guid: 32bd3fb7214ed9701b7f4f63546d9179, type: 3}
-      propertyPath: maxHealth
-      value: 2
-      objectReference: {fileID: 0}
-    - target: {fileID: 2359249061819118629, guid: 32bd3fb7214ed9701b7f4f63546d9179, type: 3}
       propertyPath: equipedWeapom
       value: 
       objectReference: {fileID: 0}

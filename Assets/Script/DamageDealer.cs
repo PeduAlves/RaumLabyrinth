@@ -3,7 +3,7 @@ using UnityEngine;
 public class DamageDealer : MonoBehaviour
 {
 
-    [SerializeField] int damage = 1;
+    [SerializeField] protected int damage = 1;
     [SerializeField] LayerMask playerLayer;
     
     void OnTriggerEnter(Collider other)

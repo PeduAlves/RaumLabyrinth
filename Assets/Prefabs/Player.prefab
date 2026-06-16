@@ -902,7 +902,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   damageOverlay: {fileID: 2277420773257113516}
-  maxHealth: 1
+  maxHealth: 2
   regenRate: 5
   playerUI: {fileID: 3286999655066573212}
 --- !u!1 &8555391856349980232

@@ -145600,10 +145600,17 @@ AnimationClip:
   m_HasMotionFloatCurves: 0
   m_Events:
   - time: 1.88
-    functionName: SpawnShokwave
+    functionName: SpawnRightShokwave
     data: 
     objectReferenceParameter: {fileID: 0}
-    floatParameter: 0
+    floatParameter: 2
+    intParameter: 0
+    messageOptions: 0
+  - time: 1.88
+    functionName: SpawnLeftShokwave
+    data: 
+    objectReferenceParameter: {fileID: 0}
+    floatParameter: 2
     intParameter: 0
     messageOptions: 0
   - time: 3

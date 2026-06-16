@@ -36,6 +36,7 @@ public class Enemy : MonoBehaviour
     [SerializeField] private Collider rightFistCollider;
     [SerializeField] private Collider leftFistCollider;
     [SerializeField] private float attackRange = 3f;
+    [SerializeField] private float attackCooldown = 1f;
     [SerializeField] private GameObject shokwavePrefab;
 
     [Header("State Variables")]
@@ -47,6 +48,7 @@ public class Enemy : MonoBehaviour
     private bool isPlayerInSight = false;
     private Vector3 lastTargetPosition;
     [SerializeField] private float searchTimer = 0f;
+    private float attackCooldownTimer = 0f;
 
     private void Awake()
     {
@@ -83,10 +85,14 @@ public class Enemy : MonoBehaviour
             if (searchTimer <= 0f) isSearching = false;
         }
 
+        if (attackCooldownTimer > 0f)
+        {
+            attackCooldownTimer -= Time.deltaTime;
+        }
+
         if (!agent.pathPending && agent.remainingDistance <= 0.1f && currentState.IsMovingState())
         {
             FinishLooking();
-            //ResetAi();
         }
     }
 
@@ -96,7 +102,7 @@ public class Enemy : MonoBehaviour
         if (currentState == newState || IsBroken()) return;
         if (!force && currentState.GetStatePriority() > newState.GetStatePriority()) return;
 
-        if (currentState == EnemyStates.Running)
+        if (currentState == EnemyStates.Running && newState != EnemyStates.Attacking)
         {
             animator.SetBool(currentState.GetAnimationStateBooleanName(), false);
         }
@@ -182,9 +188,9 @@ public class Enemy : MonoBehaviour
     }
 
     // --- MOVEMENT ---
-    void GoToLocation(Vector3 location, EnemyStates moveState = EnemyStates.Walking)
+    void GoToLocation(Vector3 location, EnemyStates moveState = EnemyStates.Walking, bool allowOverride = false)
     {
-        ChangeStates(moveState);
+        ChangeStates(moveState, allowOverride);
         agent.isStopped = false;
         agent.SetDestination(new Vector3(location.x, transform.position.y, location.z));
     }
@@ -212,7 +218,7 @@ public class Enemy : MonoBehaviour
             finalPoint = candidatePoint;
         }
 
-        GoToLocation(finalPoint);
+        GoToLocation(finalPoint, EnemyStates.Walking, true);
     }
 
     public void FinishLooking() => Patrol(isSearching ? lastTargetPosition : spawnLocation);
@@ -254,7 +260,7 @@ public class Enemy : MonoBehaviour
         Vector3 headCenter = transform.TransformPoint(visionRange.center);
         float targetDistance = Vector3.Distance(headCenter, targetPos);
 
-        if (targetDistance <= attackRange)
+        if (targetDistance <= attackRange && attackCooldownTimer <= 0f)
         {
             ExecuteAttack(targetPos);
             return;
@@ -283,7 +289,7 @@ public class Enemy : MonoBehaviour
             if (Vector3.Distance(lastTargetPosition, targetPosition.Value) > 1f || currentState != EnemyStates.Walking)
             {
                 lastTargetPosition = targetPosition.Value;
-                GoToLocation(lastTargetPosition);
+                GoToLocation(lastTargetPosition, EnemyStates.Chasing);
             }
         }
         else if (isPlayerInSight)
@@ -350,23 +356,38 @@ public class Enemy : MonoBehaviour
         leftFistCollider.enabled = !bodyParts[EnemyDamagablePart.LeftArm].isDisabled;
     }
 
-    void SpawnShokwave()
-    {// não sei pq, mas as mãos estão invertidas,
-     // então o shokwave da mão direita sai da mão esquerda e vice versa,
-     // isso é algo que pode ser corrigido futuramente, mas por enquanto é mais fácil deixar assim do que arrumar a animação
-        if (!bodyParts[EnemyDamagablePart.RightArm].isDisabled)
-            Instantiate(shokwavePrefab, leftFistCollider.transform.position, shokwavePrefab.transform.rotation);
+    void InstantiateAndSetupShockwave(Vector3 spawnPosition)
+    {
+        GameObject wave = Instantiate(shokwavePrefab, spawnPosition, shokwavePrefab.transform.rotation);
+        EnemyShockwave waveScript = wave.GetComponent<EnemyShockwave>();
+    }
 
-        if (!bodyParts[EnemyDamagablePart.LeftArm].isDisabled)
-            Instantiate(shokwavePrefab, rightFistCollider.transform.position, shokwavePrefab.transform.rotation);
+    // não sei pq, mas as mãos estão invertidas,
+    // então o shokwave da mão direita sai da mão esquerda e vice versa,
+    // isso é algo que pode ser corrigido futuramente, mas por enquanto é mais fácil deixar assim do que arrumar a animação
+    void SpawnRightShokwave(float shockwaveSpeed)
+    {
+        if (!bodyParts[EnemyDamagablePart.RightArm].isDisabled)
+            InstantiateAndSetupShockwave(rightFistCollider.transform.position);
+    }
+
+    void SpawnLeftShokwave(float shockwaveSpeed)
+    {
+        if (!bodyParts[EnemyDamagablePart.LeftArm].isDisabled) 
+            InstantiateAndSetupShockwave(leftFistCollider.transform.position);
     }
 
     void EndAttack()
     {
-        rightFistCollider.enabled = leftFistCollider.enabled = false; if (isPlayerInSight)
+        rightFistCollider.enabled = leftFistCollider.enabled = false;
+        attackCooldownTimer = attackCooldown;
+        animator.SetBool(EnemyStates.Running.GetAnimationStateBooleanName(), false);
+
+        if (isPlayerInSight)
         {
             ChangeStates(EnemyStates.Chasing, true);
             agent.isStopped = false;
+            agent.SetDestination(new Vector3(lastTargetPosition.x, transform.position.y, lastTargetPosition.z));
         }
         else
         {
