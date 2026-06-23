@@ -1,8 +1,9 @@
 using UnityEngine;
+using FMODUnity;
 
 public class Gun : MonoBehaviour
 { // later update this to be a parent class for different types of guns, with different shooting mechanics and stats
-    [SerializeField] 
+    [SerializeField]
     private Camera PlayerCamera;
     private float maxDistance = 100f;
     private float alignmentSpeed = 20f;
@@ -12,6 +13,18 @@ public class Gun : MonoBehaviour
     public int Damage = 1;
     public float Range = 100f;
     public LayerMask HitLayers;
+
+    [Header("Game Juice")]
+    [Tooltip("Shake ao disparar (recuo)")]
+    [SerializeField] private float shootShakeTrauma = 0.22f;
+    [Tooltip("Shake extra quando o tiro acerta algo destrutível")]
+    [SerializeField] private float hitShakeTrauma = 0.18f;
+    [Tooltip("Frame stop (segundos reais) quando o tiro acerta algo destrutível")]
+    [SerializeField] private float hitStopDuration = 0.05f;
+
+    [Header("Áudio (FMOD)")]
+    [Tooltip("Arraste o evento FMOD do tiro aqui")]
+    public EventReference shootSound;
 
 
     private Animator animator;
@@ -47,10 +60,13 @@ public class Gun : MonoBehaviour
         if (isEmpty) return;
         isEmpty = true;
         animator.SetTrigger("Shoot");
+        if (!shootSound.IsNull) RuntimeManager.PlayOneShot(shootSound, transform.position);
     }
 
     public void FinishShooting()
     {
+        if (CameraShake.Instance != null) CameraShake.Instance.AddTrauma(shootShakeTrauma);
+
         Ray ray = new Ray(transform.position, transform.forward);
         RaycastHit hit;
 
@@ -66,6 +82,10 @@ public class Gun : MonoBehaviour
             if (target != null)
             {
                 target.TakeDamage(Damage);
+
+                // Juice: impacto no acerto -> shake extra + frame stop.
+                if (CameraShake.Instance != null) CameraShake.Instance.AddTrauma(hitShakeTrauma);
+                HitStop.Do(hitStopDuration);
             }
 
         }

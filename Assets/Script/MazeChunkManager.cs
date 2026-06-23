@@ -1,10 +1,22 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 
 /// <summary>
-/// Gerencia a visibilidade de chunks do labirinto com base na posição do player.
-/// Ativa apenas os chunks próximos ao player, desativando o restante.
-/// 
+/// Gerencia a visibilidade (culling) de chunks do labirinto com base na posição do player.
+///
+/// Princípios desta versão:
+///  • Os objetos NÃO são desativados ao serem registrados. Durante a geração e a
+///    câmera aérea o labirinto inteiro fica visível. O culling só começa quando o
+///    player assume o controle (BeginCulling).
+///  • O culling é INCREMENTAL: ao cruzar a fronteira de um chunk, apenas a diferença
+///    (chunks que entraram / saíram do alcance) é alternada, em vez de desligar tudo
+///    e religar os próximos.
+///  • Navmesh-aware: objetos com NavMeshAgent (inimigos) NUNCA são cullled —
+///    desativá-los desligaria o agente e geraria erros "not placed on a NavMesh".
+///    O NavMesh é baked uma vez e continua válido mesmo com pisos/paredes desativados,
+///    então pisos (que carregam a grama animada) também são cullados por distância.
+///
 /// SETUP: Adicione este script num GameObject vazio na cena (ex: "ChunkManager").
 /// No MazeGenerator, arraste esse GameObject no campo "Chunk Manager".
 /// </summary>
@@ -17,48 +29,55 @@ public class MazeChunkManager : MonoBehaviour
     [Tooltip("Quantos chunks ao redor do player ficam visíveis (ex: 2 = raio de 2 chunks)")]
     public int renderDistance = 2;
 
+    [Tooltip("Usar alcance circular em vez de quadrado (visual mais natural, menos chunks)")]
+    public bool useCircularDistance = true;
+
     [Header("Referências (preenchidas automaticamente)")]
     [Tooltip("Transform do player. Preenchido automaticamente quando o player é spawnado.")]
     public Transform playerTransform;
 
-    // Armazena todos os GameObjects por posição de chunk
-    private Dictionary<Vector2Int, List<GameObject>> chunks = new Dictionary<Vector2Int, List<GameObject>>();
+    // Apenas objetos CULLÁVEIS (paredes, decoração) entram aqui, agrupados por chunk.
+    // Pisos e inimigos não são registrados aqui — ficam sempre ativos.
+    private readonly Dictionary<Vector2Int, List<GameObject>> chunks = new Dictionary<Vector2Int, List<GameObject>>();
 
-    // Último chunk onde o player estava (evita recalcular toda frame)
+    // Conjuntos de chunks ativos. Dois buffers que alternam (ping-pong) para evitar
+    // alocação a cada atualização de visibilidade.
+    private HashSet<Vector2Int> activeChunks = new HashSet<Vector2Int>();
+    private HashSet<Vector2Int> desiredChunks = new HashSet<Vector2Int>();
+
+    // Último chunk onde o player estava (evita recalcular toda frame).
     private Vector2Int lastPlayerChunk = new Vector2Int(int.MinValue, int.MinValue);
 
-    // Referência ao spacing do labirinto (preenchida pelo MazeGenerator)
+    // Tamanho de cada chunk em células, preenchido pelo MazeGenerator.
     private float spacing = 4f;
 
-    // Flag para saber se já foi inicializado
     private bool isInitialized = false;
+
+    // O culling só roda depois que o player está em jogo (BeginCulling).
+    private bool cullingEnabled = false;
 
     // ─────────────────────────────────────────────
     //  INICIALIZAÇÃO (chamado pelo MazeGenerator)
     // ─────────────────────────────────────────────
 
     /// <summary>
-    /// Chamado pelo MazeGenerator após a geração completa.
+    /// Chamado pelo MazeGenerator antes de registrar objetos (precisa do spacing
+    /// correto para o WorldToChunk).
     /// </summary>
     public void Initialize(float mazeSpacing)
     {
         spacing = mazeSpacing;
         isInitialized = true;
-        Debug.Log($"[ChunkManager] Inicializado. Spacing: {spacing} | Chunk size: {chunkSizeInCells} células | Render distance: {renderDistance} chunks");
+        Debug.Log($"[ChunkManager] Inicializado. Spacing: {spacing} | Chunk: {chunkSizeInCells} células | Render distance: {renderDistance} chunks");
     }
 
     /// <summary>
-    /// Define o Transform do player (chamado pelo MazeGenerator após spawn).
+    /// Apenas guarda o Transform do player. NÃO inicia o culling — isso é feito por
+    /// BeginCulling() quando o player de fato assume o controle.
     /// </summary>
     public void SetPlayer(Transform player)
     {
         playerTransform = player;
-        // Atualiza visibilidade imediatamente (não espera o próximo Update)
-        // para garantir que o chão esteja ativo antes da física do player rodar.
-        Vector2Int startChunk = WorldToChunk(playerTransform.position);
-        lastPlayerChunk = startChunk;
-        UpdateVisibility(startChunk);
-        Debug.Log($"[ChunkManager] Player registrado. Visibilidade atualizada para chunk {startChunk}.");
     }
 
     // ─────────────────────────────────────────────
@@ -66,20 +85,90 @@ public class MazeChunkManager : MonoBehaviour
     // ─────────────────────────────────────────────
 
     /// <summary>
-    /// Registra um GameObject no chunk correspondente à sua posição no mundo.
-    /// Chame isso para cada parede, piso e grama instanciados.
+    /// Registra um GameObject para culling por chunk.
+    /// Objetos com NavMeshAgent (inimigos) são automaticamente marcados como
+    /// não-culláveis para não desligar o agente.
     /// </summary>
-    public void RegisterObject(GameObject obj, Vector3 worldPosition)
+    /// <param name="cullable">
+    /// false para objetos que devem ficar sempre ativos (ex: pisos, pelo chão do
+    /// navmesh e raycasts). Nesse caso o objeto não é gerenciado e permanece ativo.
+    /// </param>
+    public void RegisterObject(GameObject obj, Vector3 worldPosition, bool cullable = true)
     {
+        if (obj == null) return;
+
+        // Segurança navmesh: nunca cullar algo que tenha um agente, senão o agente
+        // é desligado e quebra ("can only be called on an agent placed on a NavMesh").
+        if (cullable && obj.GetComponentInChildren<NavMeshAgent>(true) != null)
+            cullable = false;
+
+        if (!cullable) return; // permanece sempre ativo, não é gerenciado
+
         Vector2Int chunkPos = WorldToChunk(worldPosition);
 
-        if (!chunks.ContainsKey(chunkPos))
-            chunks[chunkPos] = new List<GameObject>();
+        if (!chunks.TryGetValue(chunkPos, out List<GameObject> list))
+        {
+            list = new List<GameObject>();
+            chunks[chunkPos] = list;
+        }
 
-        chunks[chunkPos].Add(obj);
+        list.Add(obj);
+        // Permanece ATIVO. O culling só começa em BeginCulling().
+    }
 
-        // Objetos começam desativados, só o Update vai ativar os próximos ao player
-        obj.SetActive(false);
+    /// <summary>
+    /// Remove um objeto do gerenciamento (ex: parede destruída por uma mutação em runtime),
+    /// evitando referências nulas acumuladas na lista do chunk.
+    /// </summary>
+    public void UnregisterObject(GameObject obj, Vector3 worldPosition)
+    {
+        if (obj == null) return;
+        if (chunks.TryGetValue(WorldToChunk(worldPosition), out List<GameObject> list))
+            list.Remove(obj);
+    }
+
+    // ─────────────────────────────────────────────
+    //  CONTROLE DE CULLING
+    // ─────────────────────────────────────────────
+
+    /// <summary>
+    /// Ativa TODOS os chunks e desliga o culling.
+    /// Use durante a câmera aérea e antes do bake do NavMesh (geometria completa).
+    /// </summary>
+    public void ShowAll()
+    {
+        cullingEnabled = false;
+        foreach (var kvp in chunks)
+            SetChunkActive(kvp.Key, true);
+        activeChunks.Clear();
+        lastPlayerChunk = new Vector2Int(int.MinValue, int.MinValue);
+    }
+
+    /// <summary>
+    /// Inicia o culling por chunks. Chame quando o player assume o controle
+    /// (após a transição da câmera aérea). Faz o primeiro corte imediatamente.
+    /// </summary>
+    public void BeginCulling()
+    {
+        if (playerTransform == null)
+        {
+            Debug.LogWarning("[ChunkManager] BeginCulling chamado sem playerTransform. Culling não iniciado.");
+            return;
+        }
+
+        cullingEnabled = true;
+
+        // Neste momento tudo está ativo (geração/aérea). Marca todos os chunks como
+        // ativos para que o primeiro RefreshVisibility desligue corretamente os que
+        // estão fora do alcance.
+        activeChunks.Clear();
+        foreach (var key in chunks.Keys)
+            activeChunks.Add(key);
+
+        lastPlayerChunk = WorldToChunk(playerTransform.position);
+        RefreshVisibility(lastPlayerChunk);
+
+        Debug.Log($"[ChunkManager] Culling iniciado no chunk {lastPlayerChunk}.");
     }
 
     // ─────────────────────────────────────────────
@@ -88,50 +177,62 @@ public class MazeChunkManager : MonoBehaviour
 
     void Update()
     {
-        if (!isInitialized || playerTransform == null) return;
+        if (!cullingEnabled || playerTransform == null) return;
 
         Vector2Int currentChunk = WorldToChunk(playerTransform.position);
 
-        // Só recalcula quando o player muda de chunk (barato de verificar)
+        // Só recalcula quando o player muda de chunk (barato de verificar).
         if (currentChunk != lastPlayerChunk)
         {
             lastPlayerChunk = currentChunk;
-            UpdateVisibility(currentChunk);
+            RefreshVisibility(currentChunk);
         }
     }
 
-    void UpdateVisibility(Vector2Int playerChunk)
+    /// <summary>
+    /// Aplica visibilidade alternando apenas a DIFERENÇA entre o conjunto atual e o
+    /// desejado (chunks que entraram / saíram do alcance).
+    /// </summary>
+    void RefreshVisibility(Vector2Int playerChunk)
     {
-        // 1. Desativa TODOS os chunks
-        foreach (var kvp in chunks)
-            SetChunkActive(kvp.Key, false);
+        // 1. Monta o conjunto desejado no buffer reutilizável.
+        desiredChunks.Clear();
+        int sqrRadius = renderDistance * renderDistance;
 
-        // 2. Ativa apenas os chunks dentro do raio
         for (int x = -renderDistance; x <= renderDistance; x++)
         {
             for (int z = -renderDistance; z <= renderDistance; z++)
             {
-                // Opcional: usar círculo ao invés de quadrado
-                // if (x * x + z * z > renderDistance * renderDistance) continue;
-
-                Vector2Int nearbyChunk = playerChunk + new Vector2Int(x, z);
-                SetChunkActive(nearbyChunk, true);
+                if (useCircularDistance && (x * x + z * z) > sqrRadius) continue;
+                desiredChunks.Add(playerChunk + new Vector2Int(x, z));
             }
         }
 
-        // Log útil durante desenvolvimento (remova em produção)
-        int activeChunks = (renderDistance * 2 + 1) * (renderDistance * 2 + 1);
-        int totalChunks = chunks.Count;
-        // Debug.Log($"[ChunkManager] Chunk do player: {playerChunk} | Ativos: {activeChunks}/{totalChunks}");
+        // 2. Desativa o que estava ativo mas não é mais desejado.
+        foreach (var chunk in activeChunks)
+            if (!desiredChunks.Contains(chunk))
+                SetChunkActive(chunk, false);
+
+        // 3. Ativa o que é desejado mas ainda não estava ativo.
+        foreach (var chunk in desiredChunks)
+            if (!activeChunks.Contains(chunk))
+                SetChunkActive(chunk, true);
+
+        // 4. Ping-pong dos buffers: o desejado vira o ativo; o antigo ativo é
+        //    reaproveitado (será limpo no início do próximo RefreshVisibility).
+        var tmp = activeChunks;
+        activeChunks = desiredChunks;
+        desiredChunks = tmp;
     }
 
     void SetChunkActive(Vector2Int chunkPos, bool active)
     {
         if (!chunks.TryGetValue(chunkPos, out List<GameObject> objects)) return;
 
-        foreach (var obj in objects)
+        for (int i = 0; i < objects.Count; i++)
         {
-            if (obj != null)
+            var obj = objects[i];
+            if (obj != null && obj.activeSelf != active)
                 obj.SetActive(active);
         }
     }
@@ -153,29 +254,12 @@ public class MazeChunkManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Retorna o número total de objetos registrados (debug).
+    /// Retorna o número de objetos culláveis gerenciados (debug).
     /// </summary>
     public int GetTotalRegisteredObjects()
     {
         int total = 0;
         foreach (var kvp in chunks) total += kvp.Value.Count;
         return total;
-    }
-
-    /// <summary>
-    /// Ativa TODOS os chunks (útil para o mapa aéreo).
-    /// </summary>
-    public void ShowAll()
-    {
-        foreach (var kvp in chunks)
-            SetChunkActive(kvp.Key, true);
-    }
-
-    /// <summary>
-    /// Desativa todos exceto os do player (volta ao modo normal).
-    /// </summary>
-    public void HideAll()
-    {
-        lastPlayerChunk = new Vector2Int(int.MinValue, int.MinValue); // Força re-render
     }
 }

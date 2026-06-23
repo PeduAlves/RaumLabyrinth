@@ -3,31 +3,48 @@ using UnityEngine;
 [RequireComponent(typeof(CharacterController))]
 public class FirstPersonController : MonoBehaviour
 {
-    [Header("Configurações de Movimento")]
-    public float walkSpeed = 5f;
-    public float runSpeed = 10f;
-    public float gravity = -9.81f;
+    [Header("Movimento")]
+    [SerializeField] private float walkSpeed = 5f;
+    [SerializeField] private float runSpeed = 10f;
+    [Tooltip("Altura do pulo em metros")]
+    [SerializeField] private float jumpHeight = 1.2f;
+    [SerializeField] private float gravity = -9.81f;
+    [Tooltip("Velocidade vertical mantida no chão para 'colar' o player na rampa/piso")]
+    [SerializeField] private float groundedStickForce = -2f;
 
-    [Header("Configurações de Câmera")]
-    public float mouseSensitivity = 2f;
-    public Transform playerCamera; // Arraste a Camera aqui se não achar automático
+    [Header("Câmera")]
+    [SerializeField] private float mouseSensitivity = 2f;
+    [SerializeField] private float minPitch = -90f;
+    [SerializeField] private float maxPitch = 90f;
+    [Tooltip("Deixe vazio para achar a primeira Camera filha automaticamente")]
+    [SerializeField] private Transform playerCamera;
 
-    // Variáveis internas
+    [Header("Teclas")]
+    [SerializeField] private KeyCode runKey = KeyCode.LeftShift;
+    [SerializeField] private KeyCode jumpKey = KeyCode.Space;
+    [SerializeField] private KeyCode mapKey = KeyCode.Tab;
+
+    [Header("UI")]
+    public GameObject mapaUIPlayer; // Atribuído pelo MazeGenerator após o spawn
+
     private CharacterController controller;
-    private Vector3 velocity;
-    private float xRotation = 0f;
-
-    public GameObject mapaUIPlayer; // Arraste o painel do mapa aqui
+    private float verticalVelocity; // só o eixo Y persiste entre frames (gravidade/pulo)
+    private float pitch;            // rotação vertical acumulada da câmera
 
     void Start()
     {
         controller = GetComponent<CharacterController>();
 
-        // Se não atribuiu a câmera no Inspector, tenta achar a primeira filha
+        // Se não atribuiu a câmera no Inspector, tenta achar a primeira filha.
         if (playerCamera == null)
             playerCamera = GetComponentInChildren<Camera>().transform;
 
-        // Trava o mouse no centro da tela e o esconde
+        // Garante um CameraShake na câmera (para o game juice funcionar sem setup manual).
+        // Pode ser adicionado manualmente no prefab para ajustar os valores no Inspector.
+        if (playerCamera.GetComponent<CameraShake>() == null)
+            playerCamera.gameObject.AddComponent<CameraShake>();
+
+        // Trava o mouse no centro da tela e o esconde.
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }
@@ -41,53 +58,51 @@ public class FirstPersonController : MonoBehaviour
 
     void HandleMouseLook()
     {
+        // GetAxis("Mouse ...") já é delta de movimento; não multiplica por deltaTime.
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
         float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
 
-        // Rotaciona a Câmera verticalmente (olhar para cima/baixo)
-        xRotation -= mouseY;
-        xRotation = Mathf.Clamp(xRotation, -90f, 90f); // Impede pescoço de girar 360
-        playerCamera.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
+        // Olhar para cima/baixo (câmera) com trava para não virar o pescoço 360°.
+        pitch = Mathf.Clamp(pitch - mouseY, minPitch, maxPitch);
+        playerCamera.localRotation = Quaternion.Euler(pitch, 0f, 0f);
 
-        // Rotaciona o Corpo horizontalmente (olhar para lados)
+        // Olhar para os lados (corpo).
         transform.Rotate(Vector3.up * mouseX);
     }
 
     void HandleMovement()
     {
-        // Verifica se está segurando Shift para correr
-        float currentSpeed = Input.GetKey(KeyCode.LeftShift) ? runSpeed : walkSpeed;
+        bool grounded = controller.isGrounded;
 
+        // Ao aterrissar, zera a queda acumulada para o player ficar "colado" no chão.
+        if (grounded && verticalVelocity < 0f)
+            verticalVelocity = groundedStickForce;
+
+        // Movimento horizontal relativo à direção que o player está olhando.
         float x = Input.GetAxis("Horizontal"); // A/D
         float z = Input.GetAxis("Vertical");   // W/S
+        float speed = Input.GetKey(runKey) ? runSpeed : walkSpeed;
+        Vector3 horizontal = (transform.right * x + transform.forward * z) * speed;
 
-        // Move na direção que o player está olhando
-        Vector3 move = transform.right * x + transform.forward * z;
+        // Pulo único: só dispara quando está no chão (no ar, isGrounded é false → sem double jump).
+        if (grounded && Input.GetKeyDown(jumpKey))
+            verticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
 
-        controller.Move(move * currentSpeed * Time.deltaTime);
+        // Gravidade.
+        verticalVelocity += gravity * Time.deltaTime;
 
-        // Aplica gravidade simples
-        if (controller.isGrounded && velocity.y < 0)
-        {
-            velocity.y = -2f; // Mantém o player "colado" no chão
-        }
-
-        velocity.y += gravity * Time.deltaTime;
-        controller.Move(velocity * Time.deltaTime);
+        // Um único Move com horizontal + vertical (uma só resolução de colisão por frame).
+        Vector3 motion = horizontal + Vector3.up * verticalVelocity;
+        controller.Move(motion * Time.deltaTime);
     }
+
     void HandleMapInput()
     {
         if (mapaUIPlayer == null) return;
 
-        // Input.GetKey retorna true ENQUANTO a tecla está pressionada
-        // Isso faz com que: Segurou = Abre (true), Soltou = Fecha (false)
-        bool mostrarMapa = Input.GetKey(KeyCode.Tab);
-        
-        // Só chama o SetActive se o estado mudar, para otimizar um pouco
-        if (mapaUIPlayer.activeSelf != mostrarMapa)
-        {
-            mapaUIPlayer.SetActive(mostrarMapa);
-        }
+        // Segurar a tecla abre o mapa; soltar fecha. Só chama SetActive quando muda.
+        bool showMap = Input.GetKey(mapKey);
+        if (mapaUIPlayer.activeSelf != showMap)
+            mapaUIPlayer.SetActive(showMap);
     }
-    
 }

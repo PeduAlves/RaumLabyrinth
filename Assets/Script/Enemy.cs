@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
+using FMODUnity;
 
 public class Enemy : MonoBehaviour
 {
@@ -26,6 +27,7 @@ public class Enemy : MonoBehaviour
     [SerializeField] private float angularSpeedWalkMultiplier = 0.5f;
     [SerializeField] private float angularSpeedRunningMultiplier = 2f;
     private float runningSpeed;
+    private float baseAcceleration;
     [SerializeField] private float patrolRadius = 7f;
     [Range(0f, 1f)][SerializeField] private float minPatrolRadiusPercentage = 0.5f;
     [SerializeField] private LayerMask groundLayer;
@@ -39,6 +41,33 @@ public class Enemy : MonoBehaviour
     [SerializeField] private float attackCooldown = 1f;
     [SerializeField] private GameObject shokwavePrefab;
 
+    [Header("Game Juice / Camera Shake")]
+    [Tooltip("Distância em que o shake do inimigo zera (perto = mais forte)")]
+    [SerializeField] private float shakeMaxDistance = 15f;
+    [SerializeField] private float footstepTrauma = 0.22f;
+    [SerializeField] private float runFootstepTrauma = 0.40f;
+    [Tooltip("Shake contínuo durante a perseguição normal (Chasing)")]
+    [SerializeField] private float chaseContinuousTrauma = 0.10f;
+    [Tooltip("Shake contínuo durante a perseguição rápida (Running)")]
+    [SerializeField] private float runContinuousTrauma = 0.28f;
+    [SerializeField] private float attackTrauma = 0.6f;
+    [SerializeField] private float attackHitStop = 0.08f;
+    [Tooltip("Gera pisões automaticamente. Desligue se usar Animation Events chamando Footstep().")]
+    [SerializeField] private bool proceduralFootsteps = true;
+    [Tooltip("Intervalo entre pisões andando (diminui conforme a velocidade aumenta)")]
+    [SerializeField] private float walkStepInterval = 0.5f;
+    [Tooltip("Tempo mínimo entre passos. Trava de segurança contra passos empilhados (som + shake).")]
+    [SerializeField] private float minFootstepInterval = 0.3f;
+    private float footstepTimer = 0f;
+    private float lastFootstepTime = -999f;
+    private Transform playerTransform;
+
+    [Header("Áudio (FMOD)")]
+    [Tooltip("Arraste o evento FMOD do passo do golem aqui")]
+    [SerializeField] private EventReference footstepSound;
+    [Tooltip("Arraste o evento FMOD do ataque do golem aqui")]
+    [SerializeField] private EventReference attackSound;
+
     [Header("State Variables")]
     [SerializeField] private EnemyStates currentState;
     [SerializeField] private bool isSearching = false;
@@ -46,6 +75,9 @@ public class Enemy : MonoBehaviour
     [SerializeField] private bool isAirborne = true;
 
     private bool isPlayerInSight = false;
+    // Cache do estado "broken" (a verdade lógica). Mantido em sincronia com o
+    // animator em DisableAi/EnableAi para não ler animator.GetBool todo frame.
+    private bool isBroken = false;
     private Vector3 lastTargetPosition;
     [SerializeField] private float searchTimer = 0f;
     private float attackCooldownTimer = 0f;
@@ -57,6 +89,7 @@ public class Enemy : MonoBehaviour
         visionRange = GetComponent<SphereCollider>();
 
         runningSpeed = walkSpeed * runningSpeedMultiplier * chaseSpeedMultiplier;
+        baseAcceleration = agent.acceleration;
         agent.speed = walkSpeed * chaseSpeedMultiplier;
         agent.angularSpeed = chaseAngularSpeed;
         // animator.speed = 1 / chaseSpeedMultiplier;
@@ -66,6 +99,7 @@ public class Enemy : MonoBehaviour
     {
         minPatrolRadius = patrolRadius * minPatrolRadiusPercentage;
         spawnLocation = lastTargetPosition = transform.position;
+        isBroken = GetCondition(EnemyConditions.Broken);
 
         rightFistCollider.enabled = leftFistCollider.enabled = false;
 
@@ -90,40 +124,138 @@ public class Enemy : MonoBehaviour
             attackCooldownTimer -= Time.deltaTime;
         }
 
-        if (!agent.pathPending && agent.remainingDistance <= 0.1f && currentState.IsMovingState())
+        if (agent.isOnNavMesh && !agent.pathPending && agent.remainingDistance <= 0.1f && currentState.IsMovingState())
         {
             FinishLooking();
         }
+
+        UpdateChaseShake();
+        if (proceduralFootsteps) UpdateProceduralFootsteps();
+    }
+
+    // --- GAME JUICE / CAMERA SHAKE ---
+
+    /// <summary>0..1 conforme a proximidade do player (1 = colado, 0 = além de shakeMaxDistance).</summary>
+    private float ProximityFactor()
+    {
+        Transform p = GetPlayer();
+        if (p == null) return 0f;
+        float d = Vector3.Distance(transform.position, p.position);
+        return Mathf.Clamp01(1f - d / shakeMaxDistance);
+    }
+
+    private Transform GetPlayer()
+    {
+        // O player é spawnado depois dos inimigos, então busca preguiçosamente até achar.
+        if (playerTransform == null)
+        {
+            GameObject p = GameObject.FindGameObjectWithTag("Player");
+            if (p != null) playerTransform = p.transform;
+        }
+        return playerTransform;
+    }
+
+    /// <summary>Shake sustentado enquanto persegue — mais forte na perseguição rápida (Running).</summary>
+    private void UpdateChaseShake()
+    {
+        if (CameraShake.Instance == null) return;
+
+        float amount = 0f;
+        if (currentState == EnemyStates.Running) amount = runContinuousTrauma;
+        else if (currentState == EnemyStates.Chasing) amount = chaseContinuousTrauma;
+
+        if (amount > 0f)
+            CameraShake.Instance.ReportContinuousTrauma(amount * ProximityFactor());
+    }
+
+    private void UpdateProceduralFootsteps()
+    {
+        if (!currentState.IsMovingState() || !agent.isOnNavMesh) return;
+
+        float speed = agent.velocity.magnitude;
+        if (speed < 0.1f) return; // parado, sem pisão
+
+        footstepTimer -= Time.deltaTime;
+        if (footstepTimer <= 0f)
+        {
+            DoFootstep();
+            // Passos mais rápidos quanto maior a velocidade, mas nunca abaixo do mínimo.
+            footstepTimer = Mathf.Clamp(walkStepInterval * (walkSpeed / Mathf.Max(speed, 0.1f)), minFootstepInterval, walkStepInterval);
+        }
+    }
+
+    /// <summary>Pisão via Animation Event: coloque um evento "Footstep" no frame em que o
+    /// braço toca o chão. O ritmo vem da animação, então NÃO passa pela trava de tempo.</summary>
+    public void Footstep() => DoFootstep(fromAnimation: true);
+
+    private void DoFootstep(bool fromAnimation = false)
+    {
+        // Passos PROCEDURAIS podem disparar rápido demais (alta velocidade) → trava de tempo.
+        // Animation Events já vêm no ritmo certo da animação → tocam direto, sem trava.
+        if (!fromAnimation && Time.time - lastFootstepTime < minFootstepInterval) return;
+        lastFootstepTime = Time.time;
+
+        // Som do passo sempre toca (a atenuação por distância é do próprio evento FMOD 3D);
+        // o shake da câmera é que depende da proximidade.
+        if (!footstepSound.IsNull) RuntimeManager.PlayOneShot(footstepSound, transform.position);
+
+        if (CameraShake.Instance == null) return;
+
+        float prox = ProximityFactor();
+        if (prox <= 0f) return;
+
+        float baseTrauma = currentState == EnemyStates.Running ? runFootstepTrauma : footstepTrauma;
+        // prox ao quadrado dá mais peso quando o player está bem perto.
+        CameraShake.Instance.AddTrauma(baseTrauma * prox * prox);
+    }
+
+    private void TriggerAttackJuice()
+    {
+        if (!attackSound.IsNull) RuntimeManager.PlayOneShot(attackSound, transform.position);
+
+        if (CameraShake.Instance != null)
+            CameraShake.Instance.AddTrauma(attackTrauma * Mathf.Max(ProximityFactor(), 0.4f));
+        HitStop.Do(attackHitStop);
     }
 
     // --- STATE MACHINE & CONDITIONS ---
     void ChangeStates(EnemyStates newState, bool force = false)
     {
-        if (currentState == newState || IsBroken()) return;
+        if (currentState == newState || isBroken) return;
         if (!force && currentState.GetStatePriority() > newState.GetStatePriority()) return;
 
-        if (currentState == EnemyStates.Running && newState != EnemyStates.Attacking)
-        {
-            animator.SetBool(currentState.GetAnimationStateBooleanName(), false);
-        }
-
-        if (newState.IsMovingState())
-        {
-            agent.enabled = true;
-        }
-        else
-        {
-            agent.enabled = false;
-        }
-
+        OnExitState(currentState, newState);
         currentState = newState;
-        animator.SetTrigger(newState.GetAnimationTrigger());
-
-        ApplyStatePhysics(currentState);
+        OnEnterState(newState);
     }
 
-    void ApplyStatePhysics(EnemyStates state) {
+    // Lógica ao SAIR de um estado.
+    void OnExitState(EnemyStates from, EnemyStates to)
+    {
+        // Desliga o blend de corrida ao deixar o Running — exceto indo atacar, onde o
+        // ataque "corrido" precisa do bool ainda ligado (EndAttack o limpa depois).
+        if (from == EnemyStates.Running && to != EnemyStates.Attacking)
+            animator.SetBool(EnemyStates.Running.GetAnimationStateBooleanName(), false);
+    }
 
+    // Lógica ao ENTRAR num estado: agente, animação e velocidades num lugar só.
+    void OnEnterState(EnemyStates state)
+    {
+        // O agente só fica ativo nos estados de movimento; desligado nos demais.
+        agent.enabled = state.IsMovingState();
+
+        animator.SetTrigger(state.GetAnimationTrigger());
+        if (state == EnemyStates.Running)
+            animator.SetBool(state.GetAnimationStateBooleanName(), true);
+
+        ApplyStatePhysics();
+    }
+
+    // Recalcula velocidade / aceleração / velocidade angular do estado atual aplicando
+    // o modificador de membros quebrados. Pode ser chamado fora de uma troca de estado
+    // (ex: ao quebrar/curar um membro) para refletir o novo modificador.
+    void ApplyStatePhysics()
+    {
         float baseSpeed = walkSpeed;
         float baseAngular = chaseAngularSpeed;
         animator.speed = 1f;
@@ -133,7 +265,7 @@ public class Enemy : MonoBehaviour
             case EnemyStates.Walking:
                 baseSpeed = walkSpeed;
                 baseAngular = chaseAngularSpeed * angularSpeedWalkMultiplier;
-                animator.speed = 1/chaseSpeedMultiplier;
+                animator.speed = 1f / chaseSpeedMultiplier;
                 break;
             case EnemyStates.Chasing:
                 baseSpeed = walkSpeed * chaseSpeedMultiplier;
@@ -142,23 +274,29 @@ public class Enemy : MonoBehaviour
             case EnemyStates.Running:
                 baseSpeed = runningSpeed;
                 baseAngular = chaseAngularSpeed * angularSpeedRunningMultiplier;
-                animator.SetBool(currentState.GetAnimationStateBooleanName(), true);
                 break;
         }
 
-        float damageModifier = 1f;
-        if (GetCondition(EnemyConditions.BrokeLeftLeg)) damageModifier *= crippleSpeedMultiplier;
-        if (GetCondition(EnemyConditions.BrokeRightLeg)) damageModifier *= crippleSpeedMultiplier;
-        if (GetCondition(EnemyConditions.BrokeLeftArm)) damageModifier *= crippleSpeedMultiplier;
-        if (GetCondition(EnemyConditions.BrokeRightArm)) damageModifier *= crippleSpeedMultiplier;
-
+        float damageModifier = CrippleSpeedModifier();
         agent.speed = baseSpeed * damageModifier;
         agent.angularSpeed = baseAngular;
+        agent.acceleration = baseAcceleration * damageModifier;
+    }
+
+    // Produto dos multiplicadores de cada membro quebrado (1 = sem dano).
+    float CrippleSpeedModifier()
+    {
+        float m = 1f;
+        if (GetCondition(EnemyConditions.BrokeLeftLeg)) m *= crippleSpeedMultiplier;
+        if (GetCondition(EnemyConditions.BrokeRightLeg)) m *= crippleSpeedMultiplier;
+        if (GetCondition(EnemyConditions.BrokeLeftArm)) m *= crippleSpeedMultiplier;
+        if (GetCondition(EnemyConditions.BrokeRightArm)) m *= crippleSpeedMultiplier;
+        return m;
     }
 
     void SetCondition(EnemyConditions condition, bool value) => animator.SetBool(condition.GetAnimatorConditionName(), value);
     bool GetCondition(EnemyConditions condition) => animator.GetBool(condition.GetAnimatorConditionName());
-    bool IsBroken() => GetCondition(EnemyConditions.Broken);
+    bool IsBroken() => isBroken;
 
     private bool CheckIfPartBroken()
     {
@@ -179,11 +317,17 @@ public class Enemy : MonoBehaviour
     // --- AI CONTROLLERS ---
     public void DisableAi()
     {
+        isBroken = true;
         SetCondition(EnemyConditions.Broken, true);
         agent.enabled = false;
     }
 
-    public void EnableAi() => SetCondition(EnemyConditions.Broken, false);
+    public void EnableAi()
+    {
+        isBroken = false;
+        agent.enabled = true;
+        SetCondition(EnemyConditions.Broken, false);
+    }
 
     public void FinishEnableAi()
     {
@@ -199,7 +343,15 @@ public class Enemy : MonoBehaviour
     // --- MOVEMENT ---
     void GoToLocation(Vector3 location, EnemyStates moveState = EnemyStates.Walking, bool allowOverride = false)
     {
+        if (isBroken) return;
+
+        // ChangeStates reativa o agente nos estados de movimento; por isso o guard de
+        // NavMesh vem DEPOIS dele (senão, ao sair de Looking/Attacking com o agente
+        // ainda desligado, nunca conseguiríamos andar).
         ChangeStates(moveState, allowOverride);
+
+        if (!agent.enabled || !agent.isOnNavMesh) return;
+
         agent.isStopped = false;
         agent.SetDestination(new Vector3(location.x, transform.position.y, location.z));
     }
@@ -318,53 +470,46 @@ public class Enemy : MonoBehaviour
 
     internal void TakeDamage(EnemyDamagablePart part)
     {
-        GameObject player = GameObject.FindGameObjectWithTag("Player");
-        lastTargetPosition = player.transform.position;
+        Transform player = GetPlayer();
+        if (player == null) return;
+
+        lastTargetPosition = player.position;
         isPlayerInSight = true;
-        if (player != null)
-        {
-            if (HasAllLimbs())
-            {
-                GoToLocation(lastTargetPosition, EnemyStates.Running);
-            } else
-            {
-                GoToLocation(lastTargetPosition, EnemyStates.Chasing);
-            }
-        }
+
+        // Sem membros quebrados, parte para a perseguição rápida; senão, perseguição normal.
+        GoToLocation(lastTargetPosition, HasAllLimbs() ? EnemyStates.Running : EnemyStates.Chasing);
     }
 
     internal void DestroyPart(EnemyDamagablePart part)
     {
         if (part == EnemyDamagablePart.Head) isHeadBroken = true;
         else if (part != EnemyDamagablePart.Torso)
-        {
-            agent.acceleration *= 0.5f;
-            agent.speed *= 0.5f;
             SetCondition(part.GetContionOfPartDamage(), true);
-        }
+
         if (CheckIfPartBroken() || currentState == EnemyStates.Running) DisableAi();
 
-        ApplyStatePhysics(currentState);
+        // O modificador de velocidade é aplicado num só lugar (ApplyStatePhysics);
+        // não mexemos em agent.speed/acceleration manualmente para não conflitar.
+        ApplyStatePhysics();
     }
 
     internal void Heal(EnemyDamagablePart part)
     {
         if (part == EnemyDamagablePart.Head) isHeadBroken = false;
         else if (part != EnemyDamagablePart.Torso)
-        {
-            agent.acceleration *= 2f;
-            agent.speed *= 2f;
             SetCondition(part.GetContionOfPartDamage(), false);
-        }
 
         if (!CheckIfPartBroken()) EnableAi();
+
+        // Restaura a velocidade conforme os membros que voltaram a funcionar.
+        ApplyStatePhysics();
     }
 
     void ExecuteAttack(Vector3 playerPos)
     {
         if (bodyParts[EnemyDamagablePart.RightArm].isDisabled && bodyParts[EnemyDamagablePart.LeftArm].isDisabled) return;
 
-        agent.isStopped = true;
+        if (agent.isOnNavMesh) agent.isStopped = true;
         ChangeStates(EnemyStates.Attacking);
 
         rightFistCollider.enabled = !bodyParts[EnemyDamagablePart.RightArm].isDisabled;
@@ -383,13 +528,19 @@ public class Enemy : MonoBehaviour
     void SpawnRightShokwave(float shockwaveSpeed)
     {
         if (!bodyParts[EnemyDamagablePart.RightArm].isDisabled)
+        {
             InstantiateAndSetupShockwave(rightFistCollider.transform.position);
+            TriggerAttackJuice();
+        }
     }
 
     void SpawnLeftShokwave(float shockwaveSpeed)
     {
-        if (!bodyParts[EnemyDamagablePart.LeftArm].isDisabled) 
+        if (!bodyParts[EnemyDamagablePart.LeftArm].isDisabled)
+        {
             InstantiateAndSetupShockwave(leftFistCollider.transform.position);
+            TriggerAttackJuice();
+        }
     }
 
     void EndAttack()
@@ -399,14 +550,8 @@ public class Enemy : MonoBehaviour
         animator.SetBool(EnemyStates.Running.GetAnimationStateBooleanName(), false);
 
         if (isPlayerInSight)
-        {
-            ChangeStates(EnemyStates.Chasing, true);
-            agent.isStopped = false;
-            agent.SetDestination(new Vector3(lastTargetPosition.x, transform.position.y, lastTargetPosition.z));
-        }
+            GoToLocation(lastTargetPosition, EnemyStates.Chasing, true);
         else
-        {
             ResetAi();
-        }
     }
 }

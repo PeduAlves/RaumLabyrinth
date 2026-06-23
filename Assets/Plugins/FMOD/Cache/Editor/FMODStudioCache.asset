@@ -1,0 +1,192 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-6717708533888602111
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/PassoGolem
+  m_EditorClassIdentifier: 
+  Path: event:/PassoGolem
+  Guid:
+    Data1: 707812768
+    Data2: 1220449854
+    Data3: 689676443
+    Data4: -577221310
+  Banks:
+  - {fileID: 6822091065320427875}
+  IsStream: 0
+  Is3D: 1
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 40
+  Length: 0
+--- !u!114 &-6002858600658389516
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/TiroArma
+  m_EditorClassIdentifier: 
+  Path: event:/TiroArma
+  Guid:
+    Data1: 196296255
+    Data2: 1323570106
+    Data3: 886699707
+    Data4: 2007749875
+  Banks:
+  - {fileID: 3972491874546820081}
+  IsStream: 0
+  Is3D: 1
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 0
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d32cf7c32a3ed8347bac48ef5ed56d82, type: 3}
+  m_Name: FMODStudioCache
+  m_EditorClassIdentifier: 
+  EditorBanks:
+  - {fileID: 9055697430807938316}
+  - {fileID: 6822091065320427875}
+  - {fileID: 7154658406054882964}
+  - {fileID: 3972491874546820081}
+  EditorEvents:
+  - {fileID: 8269639226592423304}
+  - {fileID: -6717708533888602111}
+  - {fileID: -6002858600658389516}
+  EditorParameters: []
+  MasterBanks:
+  - {fileID: 7154658406054882964}
+  StringsBanks:
+  - {fileID: 9055697430807938316}
+  cacheVersion: 131859
+  cacheTime: 639177562426555937
+  SerializableEventsDict:
+  - key: event:/AtaqueGolem
+    index: 0
+  - key: event:/PassoGolem
+    index: 1
+  - key: event:/TiroArma
+    index: 2
+--- !u!114 &3972491874546820081
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c18180ecb35941f4682ae60107b85b7c, type: 3}
+  m_Name: bank:/Gun.bank
+  m_EditorClassIdentifier: 
+  Path: FMOD/Desktop/Gun.bank
+  Name: Gun
+  StudioPath: bank:/Gun
+  lastModified: 639177052087709339
+  FileSizes: []
+  Exists: 1
+--- !u!114 &6822091065320427875
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c18180ecb35941f4682ae60107b85b7c, type: 3}
+  m_Name: bank:/Golem.bank
+  m_EditorClassIdentifier: 
+  Path: FMOD/Desktop/Golem.bank
+  Name: Golem
+  StudioPath: bank:/Golem
+  lastModified: 639177562426555937
+  FileSizes: []
+  Exists: 1
+--- !u!114 &7154658406054882964
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c18180ecb35941f4682ae60107b85b7c, type: 3}
+  m_Name: bank:/Master.bank
+  m_EditorClassIdentifier: 
+  Path: FMOD/Desktop/Master.bank
+  Name: Master
+  StudioPath: bank:/Master
+  lastModified: 639177043387028779
+  FileSizes: []
+  Exists: 1
+--- !u!114 &8269639226592423304
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/AtaqueGolem
+  m_EditorClassIdentifier: 
+  Path: event:/AtaqueGolem
+  Guid:
+    Data1: -1919246905
+    Data2: 1192185647
+    Data3: 643298210
+    Data4: 2120844454
+  Banks:
+  - {fileID: 6822091065320427875}
+  IsStream: 0
+  Is3D: 1
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 0
+--- !u!114 &9055697430807938316
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c18180ecb35941f4682ae60107b85b7c, type: 3}
+  m_Name: bank:/Master.strings.bank
+  m_EditorClassIdentifier: 
+  Path: FMOD/Desktop/Master.strings.bank
+  Name: Master.strings
+  StudioPath: bank:/Master.strings
+  lastModified: 639177043387043832
+  FileSizes:
+  - Name: 
+    Value: 958
+  Exists: 1
